@@ -1,0 +1,10 @@
+data/
+__pycache__/
+.__init__.py
+*.json
+=======
+fonts/
+__init__.py
+*.json
+DBFunctions.py
+ommfunc.py

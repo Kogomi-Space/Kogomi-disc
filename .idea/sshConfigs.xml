@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" host="zenith.blue" id="a00b6741-31b2-4882-8402-0ba472c797ca" port="22" customName="zenith.blue" nameFormat="CUSTOM" username="root" />
+    </configs>
+  </component>
+</project>

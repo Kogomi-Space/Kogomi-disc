@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="ec21a5e7-b894-48be-b958-f1215e04207a" name="zenith.blue" url="http://zenith.blue">
+        <fileTransfer rootFolder="/root" accessType="SFTP" host="zenith.blue" port="22" sshConfigId="a00b6741-31b2-4882-8402-0ba472c797ca" sshConfig="zenith.blue">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
