@@ -1,6 +1,6 @@
 import discord
 from .functions import *
-from .DBFunctions import *
+from .DBFunctions import Database
 from .MPComparer import *
 from .GenerateRecentImage import _gen_rs_img, _gen_rb_img
 from .SearchForUser import *
@@ -56,6 +56,7 @@ class Osu(BaseCog):
         self.config.register_channel(
             rmap=None
         )
+        self.db = Database()
 
     async def message_triggered(self,message):
         if "https://osu.ppy.sh/beatmapsets/" in message.content:
@@ -158,7 +159,7 @@ class Osu(BaseCog):
 
     @commands.command(pass_context=True)
     async def omms(self,ctx,*username_list):
-        username = get_osuid(*username_list,discid=ctx.author.id)
+        username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
         if not username:
             await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
             return
@@ -198,38 +199,38 @@ class Osu(BaseCog):
         embed.set_footer(text=f"Most recent match played at {lastMatch}")
         await ctx.send(embed=embed)
 
-    @commands.command(pass_context=True)
-    @commands.cooldown(1,300, commands.BucketType.user)
-    async def suijisim(self,ctx):
-        pb = fetch_pb()
-        users = []
-        with open('untitled.txt') as f:
-            for line in f:
-                users.append(line[:-1])
-
-        seeds = []
-        for seed in ['A','B','C','D']:
-            for num in range(64):
-                seeds.append(seed)
-        nums_a = list(range(1,65))
-        nums_b = list(range(1,65))
-        nums_c = list(range(1,65))
-        nums_d = list(range(1,65))
-        for num in [nums_a, nums_b, nums_c, nums_d]:
-            random.shuffle(num)
-
-        team_order = nums_a + nums_b + nums_c + nums_d
-
-        players_df = pd.DataFrame({'player': users, 'seed': seeds, 'team': team_order})
-
-        players_df['seed'] = players_df.apply(lambda x: x['seed'] + '1' if x['team'] < 33 else x['seed'] + '2', axis=1)
-        players_df['team'] = (players_df['team'] % 32) + 1
-        res = players_df.pivot(index='team', columns='seed', values='player')
-        url = pb.create_paste(api_paste_code=res.to_markdown(),api_paste_private=1,api_paste_name="Suiji Simulator",api_paste_expire_date='1D',api_paste_format='markdown')
-        embed = discord.Embed()
-        embed.title = "Generated Suiji Teams"
-        embed.description = "[Click Here!]({})".format(url)
-        await ctx.send(embed=embed)
+    # @commands.command(pass_context=True)
+    # @commands.cooldown(1,300, commands.BucketType.user)
+    # async def suijisim(self,ctx):
+    #     pb = fetch_pb()
+    #     users = []
+    #     with open('untitled.txt') as f:
+    #         for line in f:
+    #             users.append(line[:-1])
+    #
+    #     seeds = []
+    #     for seed in ['A','B','C','D']:
+    #         for num in range(64):
+    #             seeds.append(seed)
+    #     nums_a = list(range(1,65))
+    #     nums_b = list(range(1,65))
+    #     nums_c = list(range(1,65))
+    #     nums_d = list(range(1,65))
+    #     for num in [nums_a, nums_b, nums_c, nums_d]:
+    #         random.shuffle(num)
+    #
+    #     team_order = nums_a + nums_b + nums_c + nums_d
+    #
+    #     players_df = pd.DataFrame({'player': users, 'seed': seeds, 'team': team_order})
+    #
+    #     players_df['seed'] = players_df.apply(lambda x: x['seed'] + '1' if x['team'] < 33 else x['seed'] + '2', axis=1)
+    #     players_df['team'] = (players_df['team'] % 32) + 1
+    #     res = players_df.pivot(index='team', columns='seed', values='player')
+    #     url = pb.create_paste(api_paste_code=res.to_markdown(),api_paste_private=1,api_paste_name="Suiji Simulator",api_paste_expire_date='1D',api_paste_format='markdown')
+    #     embed = discord.Embed()
+    #     embed.title = "Generated Suiji Teams"
+    #     embed.description = "[Click Here!]({})".format(url)
+    #     await ctx.send(embed=embed)
 
     @commands.command(pass_context=True)
     async def compare_mp(self,ctx):
@@ -339,7 +340,7 @@ class Osu(BaseCog):
         if len(res) == 0:
             await ctx.send("User not found in osu! database! :x:")
             return
-        result = change_osuid(ctx.author.id,res[0]['user_id'])
+        result = self.db.change_osuid(ctx.author.id,res[0]['user_id'])
         if result is True:
             await ctx.send("Added, your osu! username is set to " + res[0]['username'] + ". ✅")
         else:
@@ -347,9 +348,9 @@ class Osu(BaseCog):
 
     @commands.command()
     async def osu(self, ctx,*username_list):
-        """Shows a osu user!"""
+        """Shows an osu user!"""
         apikey = await self.config.apikey()
-        username = get_osuid(*username_list,discid=ctx.author.id)
+        username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
         if not username:
             await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
             return
@@ -482,6 +483,9 @@ class Osu(BaseCog):
         # Set new config
         await self.config.apikey.set(key)
         await ctx.send("The apikey has been added.")
+
+    async def refreshdb(self):
+        await self.db.refresh()
 
 def levenshtein_ratio_and_distance(s, t, ratio_calc = False):
     # Initialize matrix of zeros
@@ -618,8 +622,9 @@ async def _matchcosts(self,ctx,url,warmups=2):
                                       description=f)
 
         await ctx.send(embed=embed)
+
 async def _rlist(self,ctx,*username_list):
-    username = get_osuid(*username_list, discid=ctx.author.id)
+    username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
     if not username:
         await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
         return
@@ -659,7 +664,7 @@ async def _rcommand(self,ctx,*username_list):
     except:
         num = 0
         pass
-    username = get_osuid(*username_list, discid=ctx.author.id)
+    username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
     if not username:
         await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
         return
@@ -707,7 +712,7 @@ async def _rpassed(self,ctx,*username_list):
     except:
         num = 0
         pass
-    username = get_osuid(*username_list, discid=ctx.author.id)
+    username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
     if not username:
         await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
         return
@@ -764,7 +769,7 @@ async def _rbcommand(self,ctx,*username_list):
     except:
         num = 0
         pass
-    username = get_osuid(*username_list, discid=ctx.author.id)
+    username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
     if not username:
         await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
         return
@@ -795,11 +800,10 @@ async def _rbcommand(self,ctx,*username_list):
             await ctx.send(embed=embed)
     os.remove('cache/score_{}.png'.format(code))
 
-
 async def _cmp(self,ctx,*username_list):
     apikey = await self.config.apikey()
     rmap = await self.config.channel(ctx.channel).rmap()
-    username = get_osuid(*username_list, discid=ctx.author.id)
+    username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
     if not username:
         await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
         return
