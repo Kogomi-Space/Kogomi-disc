@@ -6,7 +6,9 @@ import json
 import datetime
 import random
 import matplotlib.pyplot as plt
-import pyoppai
+# import pyoppai
+import pyttanko
+
 from bs4 import BeautifulSoup
 
 from .DBFunctions import *

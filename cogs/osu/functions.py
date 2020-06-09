@@ -9,7 +9,6 @@ import decimal
 import textwrap
 import json
 import random
-import pyttanko
 import time
 import pycountry
 import matplotlib.pyplot as plt
