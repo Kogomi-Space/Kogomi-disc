@@ -82,6 +82,7 @@ class OsuAPI:
         return res
 
     async def get_pyttanko(self, map_id: str, accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None, color='blue'):
+        print(os.getcwd())
         url = 'https://osu.ppy.sh/osu/{}'.format(map_id)
         file_path = 'data/temp/{}.osu'.format(map_id)
         await self.download_file(url, file_path)
