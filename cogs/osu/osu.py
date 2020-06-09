@@ -466,15 +466,15 @@ class Osu(BaseCog):
             return
         async with ctx.typing():
             user = await osu.getUser()
-            if len(user) == 0:
+            if not user:
                 await ctx.send("User not found! :x:")
                 return
             userbest = await osu.getUserBest()
-            if len(userbest) == 0:
+            if not userbest:
                 await ctx.send("User top plays empty! :x:")
                 return
             res = await osu.getUserRecent()
-            if len(res) == 0:
+            if not res:
                 await ctx.send("No recent plays found for {}. :x:".format(username))
                 return
             if len(res) <= num:
