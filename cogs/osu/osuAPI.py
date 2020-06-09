@@ -1,5 +1,6 @@
 import os
 import asyncio
+import aiohttp
 from .DBFunctions import *
 
 class OsuAPI:
