@@ -345,15 +345,108 @@ class Osu(BaseCog):
         else:
             await ctx.send("No results.")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True,aliases=['mc'])
     async def match_costs(self,ctx,url,warmups=2):
         """Shows how well each player did in a multi lobby."""
-        await _matchcosts(self,ctx,url,warmups)
+        apikey = await self.config.apikey()
+        if 'https://osu.ppy.sh/community/matches' in url:
+            try:
+                url = url.split("matches/")
+            except:
+                await ctx.send("Invalid URL! :x:")
+                return
+            url = url[1]
+        async with ctx.typing():
+            res = await use_api(self, ctx, "https://osu.ppy.sh/api/get_match?k={}&mp={}".format(apikey, url))
+            if res['match'] == 0:
+                await ctx.send("Invalid URL! :x:")
+                return
+            if warmups <= 0:
+                pass
+            else:
+                try:
+                    for i in range(warmups):
+                        del res['games'][0]
+                except Exception as e:
+                    pass
+            if int(res['games'][0]['team_type']) == 2:
+                teamVS = True
+            else:
+                teamVS = False
+            res['games'], playerlist = parse_match(res['games'], teamVS)
+            try:
+                if ":" in res['match']['name']:
+                    name = res['match']['name'].split(":")
+                else:
+                    name = res['match']['name'].split("(", 1)
+            except:
+                name = res['match']['name']
+            try:
+                tname = name[0]
+                team1 = name[1].split("vs")
+                team2 = team1[1]
+                team1 = team1[0]
+                team1 = ''.join(c for c in team1 if c not in ' ()')
+                team2 = ''.join(c for c in team2 if c not in ' ()')
+            except:
+                try:
+                    del team1
+                    del team2
+                    del tname
+                except:
+                    pass
+                name = res['match']['name']
 
-    @commands.command(pass_context=True)
-    async def mc(self,ctx,url,warmups=2):
-        """Shows how well each player did in a multi lobby."""
-        await _matchcosts(self,ctx,url,warmups)
+            if teamVS:
+                userlist0, pointlist0 = sortdict(playerlist[1])
+                userlist1, pointlist1 = sortdict(playerlist[2])
+                f = []
+                f.append(":blue_circle: **Blue Team** :blue_circle:")
+                for index, player in enumerate(userlist0):
+                    try:
+                        username = await get_username(self, ctx, player)
+                    except:
+                        username = player + " (Banned)"
+                    f.append("**{}**: {:15} - **{:0.2f}**".format(index + 1, username, pointlist0[index]))
+                f.append("")
+                f.append(":red_circle: **Red Team** :red_circle:")
+                for index, player in enumerate(userlist1):
+                    try:
+                        username = await get_username(self, ctx, player)
+                    except:
+                        username = player + " (Banned)"
+                    f.append("**{}**: {:15} - **{:0.2f}**".format(index + 1, username, pointlist1[index]))
+                f = "\n".join(f)
+                try:
+                    embed = discord.Embed(
+                        title="<a:mLoading:529680784194404352> {}: {} vs {}".format(tname, team1, team2),
+                        url="https://osu.ppy.sh/mp/" + url,
+                        description=f)
+                except:
+                    embed = discord.Embed(title="<a:mLoading:529680784194404352> {}".format(name),
+                                          url="https://osu.ppy.sh/mp/" + url,
+                                          description=f)
+            else:
+                userlist, pointlist = sortdict(playerlist)
+                f = []
+                for index, player in enumerate(userlist):
+                    try:
+                        username = await get_username(self, ctx, player)
+                    except:
+                        username = player + " (Banned)"
+                    f.append("**{}**: {:15} - **{:0.2f}**".format(index + 1, username, pointlist[index]))
+                f = "\n".join(f)
+                try:
+                    embed = discord.Embed(
+                        title="<a:mLoading:529680784194404352> {}: {} vs {}".format(tname, team1, team2),
+                        url="https://osu.ppy.sh/mp/" + url,
+                        description=f)
+                except:
+                    embed = discord.Embed(title="<a:mLoading:529680784194404352> {}".format(name),
+                                          url="https://osu.ppy.sh/mp/" + url,
+                                          description=f)
+
+            await ctx.send(embed=embed)
 
 # Grouping recent Commands
     @commands.command(pass_context=True)
@@ -485,105 +578,6 @@ def levenshtein_ratio_and_distance(s, t, ratio_calc = False):
         # insertions and/or substitutions
         # This is the minimum number of edits needed to convert string a to string b
         return "The strings are {} edits away".format(distance[row][col])
-
-async def _matchcosts(self,ctx,url,warmups=2):
-    apikey = await self.config.apikey()
-    if 'https://osu.ppy.sh/community/matches' in url:
-        try:
-            url = url.split("matches/")
-        except:
-            await ctx.send("Invalid URL! :x:")
-            return
-        url = url[1]
-    async with ctx.typing():
-        res = await use_api(self, ctx, "https://osu.ppy.sh/api/get_match?k={}&mp={}".format(apikey, url))
-        if res['match'] == 0:
-            await ctx.send("Invalid URL! :x:")
-            return
-        if warmups <= 0:
-            pass
-        else:
-            try:
-                for i in range(warmups):
-                    del res['games'][0]
-            except Exception as e:
-                pass
-        if int(res['games'][0]['team_type']) == 2:
-            teamVS = True
-        else:
-            teamVS = False
-        res['games'], playerlist = parse_match(res['games'], teamVS)
-        try:
-            if ":" in res['match']['name']:
-                name = res['match']['name'].split(":")
-            else:
-                name = res['match']['name'].split("(", 1)
-        except:
-            name = res['match']['name']
-        try:
-            tname = name[0]
-            team1 = name[1].split("vs")
-            team2 = team1[1]
-            team1 = team1[0]
-            team1 = ''.join(c for c in team1 if c not in ' ()')
-            team2 = ''.join(c for c in team2 if c not in ' ()')
-        except:
-            try:
-                del team1
-                del team2
-                del tname
-            except:
-                pass
-            name = res['match']['name']
-
-        if teamVS:
-            userlist0, pointlist0 = sortdict(playerlist[1])
-            userlist1, pointlist1 = sortdict(playerlist[2])
-            f = []
-            f.append(":blue_circle: **Blue Team** :blue_circle:")
-            for index, player in enumerate(userlist0):
-                try:
-                    username = await get_username(self, ctx, player)
-                except:
-                    username = player + " (Banned)"
-                f.append("**{}**: {:15} - **{:0.2f}**".format(index + 1, username, pointlist0[index]))
-            f.append("")
-            f.append(":red_circle: **Red Team** :red_circle:")
-            for index, player in enumerate(userlist1):
-                try:
-                    username = await get_username(self, ctx, player)
-                except:
-                    username = player + " (Banned)"
-                f.append("**{}**: {:15} - **{:0.2f}**".format(index + 1, username, pointlist1[index]))
-            f = "\n".join(f)
-            try:
-                embed = discord.Embed(title="<a:mLoading:529680784194404352> {}: {} vs {}".format(tname, team1, team2),
-                                      url="https://osu.ppy.sh/mp/" + url,
-                                      description=f)
-            except:
-                embed = discord.Embed(title="<a:mLoading:529680784194404352> {}".format(name),
-                                      url="https://osu.ppy.sh/mp/" + url,
-                                      description=f)
-        else:
-            userlist, pointlist = sortdict(playerlist)
-            f = []
-            for index, player in enumerate(userlist):
-                try:
-                    username = await get_username(self, ctx, player)
-                except:
-                    username = player + " (Banned)"
-                f.append("**{}**: {:15} - **{:0.2f}**".format(index + 1, username, pointlist[index]))
-            f = "\n".join(f)
-            try:
-                embed = discord.Embed(title="<a:mLoading:529680784194404352> {}: {} vs {}".format(tname, team1, team2),
-                                      url="https://osu.ppy.sh/mp/" + url,
-                                      description=f)
-            except:
-                embed = discord.Embed(title="<a:mLoading:529680784194404352> {}".format(name),
-                                      url="https://osu.ppy.sh/mp/" + url,
-                                      description=f)
-
-        await ctx.send(embed=embed)
 
 async def _rlist(self,ctx,*username_list):
     username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
