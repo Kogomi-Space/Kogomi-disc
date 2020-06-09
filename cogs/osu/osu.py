@@ -236,8 +236,8 @@ class Osu(BaseCog):
             modnum = 16
         elif mods == "dt":
             modnum = 64
-        # osu = User()
-        res, res2 = await User().getBeatmap(mapID)
+        osu = User()
+        res, res2 = await osu.getBeatmap(mapid=mapID)
         if mods == "dt":
             lnth = round(float(res2[0]['total_length']) / 1.5)
             bpm = str(round(float(res2[0]['bpm']) * 1.5,2)).rstrip("0")
