@@ -109,7 +109,7 @@ class OsuAPI:
         res = await self.fetch_json("get_scores",f"b={mapID}&limit=100")
         idx = 1
         for score in res:
-            if score['user_id'] == userID:
+            if score['user_id'] == user:
                 if score['score'] == mapScore:
                     return idx
             idx += 1
