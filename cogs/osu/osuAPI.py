@@ -82,7 +82,6 @@ class OsuAPI:
         return res
 
     async def get_pyttanko(self, map_id: str, accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None, color='blue'):
-        print(os.getcwd())
         url = 'https://osu.ppy.sh/osu/{}'.format(map_id)
         file_path = '/temp/{}.osu'.format(map_id)
         await self.download_file(url, file_path)
@@ -163,7 +162,7 @@ class OsuAPI:
     async def download_file(self, url, filename):
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
-                with open(filename, 'wb') as f:
+                with open(os.getcwd() + filename, 'wb') as f:
                     while True:
                         chunk = await response.content.read(1024)
                         if not chunk:
