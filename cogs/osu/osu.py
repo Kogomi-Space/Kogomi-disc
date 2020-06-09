@@ -264,7 +264,7 @@ class Osu(BaseCog):
         f.append("=HYPERLINK(\"https://osu.ppy.sh/b/{} \",\"{} - {} [{}]\")".format(mapID,res['artist'],res['title'],res['version']))
         f.append("{}".format(mapID))
         if mods == "fm":
-            reshr = await get_pyttanko(map_id=mapID,mods=16)
+            reshr = await User.get_pyttanko(map_id=mapID,mods=16)
             ar2 = str(round(reshr['ar'],2)).rstrip("0")
             if ar2.endswith("."):
                 ar2 = ar2[:-1]
