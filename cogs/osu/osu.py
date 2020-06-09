@@ -501,21 +501,91 @@ class Osu(BaseCog):
                 await ctx.send(embed=embed)
         os.remove('cache/score_{}.png'.format(code))
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True,aliases=['rslist'])
     async def recentlist(self,ctx,*username_list):
-        await _rlist(self,ctx,*username_list)
+        osu = User(username_list, ctx.author.id)
+        if not osu.user:
+            await ctx.send("**User not set, please set your osu! username using -osuset [Username]. ❌**")
+            return
+        async with ctx.typing():
+            user = await osu.getUser()
+            if not user:
+                await ctx.send("User not found! :x:")
+                return
+            res = await osu.getUserRecent()
+            if not res:
+                await ctx.send("No recent plays found for {}. :x:".format(username))
+                return
+            embed = discord.Embed(
+                description="Recent scores for [{}](https://osu.ppy.sh/users/{})".format(user[0]['username'],
+                                                                                         user[0]['user_id']),
+                color=0x00ffff)
+            embed.set_thumbnail(url="https://a.ppy.sh/{}".format(user[0]['user_id']))
+            for idx, i in enumerate(res):
+                acc = round(calculate_acc(res[idx]), 2)
+                totalhits = (int(res[idx]['count50']) + int(res[idx]['count100']) + int(res[idx]['count300']) + int(
+                    res[idx]['countmiss']))
+                if res[idx]['perfect'] == 1:
+                    fc = True
+                else:
+                    fc = False
+                res2 = await osu.get_pyttanko(map_id=res[idx]['beatmap_id'],
+                                              accs=[int(acc)],
+                                              mods=int(res[idx]['enabled_mods']),
+                                              misses=int(res[idx]['countmiss']),
+                                              combo=int(res[idx]['maxcombo']),
+                                              completion=totalhits, fc=fc)
+                embed.add_field(
+                    name="**{}.** {} - {} [{}] {}".format(idx + 1, res2['artist'], res2['title'], res2['version'],
+                                                          rank_to_emote(res[0]['rank'])),
+                    value="◆ **{}** ◆ **{}**/{}x ◆ **{}**%".format(format(int(res[idx]['score']), ',d'),
+                                                                   res[idx]['maxcombo'], res2['max_combo'], acc),
+                    inline=False)
+                if idx == 4:
+                    break
+            await ctx.send(embed=embed)
 
-    @commands.command(pass_context=True)
-    async def rslist(self,ctx,*username_list):
-        await _rlist(self,ctx,*username_list)
-
-    @commands.command(pass_context=True)
-    async def rb(self,ctx,*username_list):
-        await _rbcommand(self,ctx,*username_list)
-
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True,aliases=['rb'])
     async def recentbest(self,ctx,*username_list):
-        await _rbcommand(self,ctx,*username_list)
+        username = get_osuid(*username_list, db=self.db, discid=ctx.author.id)
+        if not username:
+            await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
+            return
+        async with ctx.typing():
+            apikey = await self.config.apikey()
+            user = await use_api(self, ctx, "https://osu.ppy.sh/api/get_user?k={}&u={}".format(apikey, username))
+            if len(user) == 0:
+                await ctx.send("User not found! :x:")
+                return
+            res = await use_api(self, ctx, "https://osu.ppy.sh/api/get_user_recent?k={}&u={}".format(apikey, username))
+            if len(res) == 0:
+                await ctx.send("No recent plays found for {}. :x:".format(username))
+                return
+            embed = discord.Embed(
+                description="Recent scores for [{}](https://osu.ppy.sh/users/{})".format(user[0]['username'],
+                                                                                         user[0]['user_id']),
+                color=0x00ffff)
+            embed.set_thumbnail(url="https://a.ppy.sh/{}".format(user[0]['user_id']))
+            for idx, i in enumerate(res):
+                acc = round(calculate_acc(res[idx]), 2)
+                totalhits = (int(res[idx]['count50']) + int(res[idx]['count100']) + int(res[idx]['count300']) + int(
+                    res[idx]['countmiss']))
+                if res[idx]['perfect'] == 1:
+                    fc = True
+                else:
+                    fc = False
+                res2 = await get_pyttanko(res[idx]['beatmap_id'], accs=[int(acc)], mods=int(res[idx]['enabled_mods']),
+                                          misses=int(res[idx]['countmiss']), combo=int(res[idx]['maxcombo']),
+                                          completion=totalhits, fc=fc)
+                embed.add_field(
+                    name="**{}.** {} - {} [{}] {}".format(idx + 1, res2['artist'], res2['title'], res2['version'],
+                                                          rank_to_emote(res[0]['rank'])),
+                    value="◆ **{}** ◆ **{}**/{}x ◆ **{}**%".format(format(int(res[idx]['score']), ',d'),
+                                                                   res[idx]['maxcombo'], res2['max_combo'], acc),
+                    inline=False)
+                if idx == 4:
+                    break
+            await ctx.send(embed=embed)
 
     @commands.command(pass_context=True)
     async def rpassed(self,ctx,*username_list):
@@ -583,36 +653,6 @@ class Osu(BaseCog):
 
     async def refreshdb(self):
         await self.db.refresh()
-
-async def _rlist(self,ctx,*username_list):
-    username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
-    if not username:
-        await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
-        return
-    async with ctx.typing():
-        apikey = await self.config.apikey()
-        user = await use_api(self,ctx,"https://osu.ppy.sh/api/get_user?k={}&u={}".format(apikey,username))
-        if len(user) == 0:
-            await ctx.send("User not found! :x:")
-            return
-        res = await use_api(self,ctx,"https://osu.ppy.sh/api/get_user_recent?k={}&u={}".format(apikey,username))
-        if len(res) == 0:
-            await ctx.send("No recent plays found for {}. :x:".format(username))
-            return
-        embed=discord.Embed(description="Recent scores for [{}](https://osu.ppy.sh/users/{})".format(user[0]['username'],user[0]['user_id']),color=0x00ffff)
-        embed.set_thumbnail(url="https://a.ppy.sh/{}".format(user[0]['user_id']))
-        for idx,i in enumerate(res):
-            acc = round(calculate_acc(res[idx]),2)
-            totalhits = (int(res[idx]['count50']) + int(res[idx]['count100']) + int(res[idx]['count300']) + int(res[idx]['countmiss']))
-            if res[idx]['perfect'] == 1:
-                fc = True
-            else:
-                fc = False
-            res2 = await get_pyttanko(res[idx]['beatmap_id'],accs=[int(acc)],mods=int(res[idx]['enabled_mods']),misses=int(res[idx]['countmiss']),combo=int(res[idx]['maxcombo']),completion=totalhits,fc=fc)
-            embed.add_field(name="**{}.** {} - {} [{}] {}".format(idx + 1,res2['artist'],res2['title'],res2['version'],rank_to_emote(res[0]['rank'])), value="◆ **{}** ◆ **{}**/{}x ◆ **{}**%".format(format(int(res[idx]['score']),',d'),res[idx]['maxcombo'],res2['max_combo'],acc), inline=False)
-            if idx == 4:
-                break
-        await ctx.send(embed=embed)
 
 async def _rpassed(self,ctx,*username_list):
     apikey = await self.config.apikey()
