@@ -75,7 +75,9 @@ class OsuAPI:
         res = await self.fetch_json("get_beatmaps",f"b={mapid}")
         return ptnko, res
 
-    async def getUser(self,user=user):
+    async def getUser(self,user=False):
+        if not user:
+            user = self.user
         res = await self.fetch_json("get_user",f"u={user}")
         if len(res) == 0:
             return False
