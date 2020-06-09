@@ -135,6 +135,21 @@ class OsuAPI:
             return False
         return res
 
+    async def getUserBest(self,user=False):
+        if not user:
+            user = self.user
+        res = await self.fetch_json("get_user_best", f"u={user},m=0,limit=100")
+        if len(res) == 0:
+            return False
+        return res
+
+    async def getUserRecent(self,user=False):
+        if not user:
+            user = self.user
+        res = await self.fetch_json("get_user_recent", f"u={user},m=0,limit=50")
+        if len(res) == 0:
+            return False
+        return res
     async def getMatch(self,mp):
         res = await self.fetch_json("get_match",f"mp={mp}")
         if len(res) == 0:
