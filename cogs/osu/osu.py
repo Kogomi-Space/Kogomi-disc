@@ -1,5 +1,6 @@
 import discord
 import os, sys
+from .osuAPI import OsuAPI as User
 from .functions import *
 from .DBFunctions import *
 from .MPComparer import *
@@ -159,11 +160,11 @@ class Osu(BaseCog):
 
     @commands.command(pass_context=True)
     async def omms(self,ctx,*username_list):
-        username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
-        if not username:
-            await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
+        osu = User(username_list,ctx.author.id)
+        if not osu.user:
+            await ctx.send("**User not set, please set your osu! username using -osuset [Username]. ❌**")
             return
-        res = await fetchOmmData(username)
+        res = await fetchOmmData(osu.user)
         embed = discord.Embed()
         embed.colour = 0x00FFFF
         embed.set_author(name=f"osu!matchmaking Information for {res['osuName']}",url=f"https://osu.ppy.sh/users/{res['osuId']}",icon_url=f"https://osu.ppy.sh/images/flags/{res['countryCode']}.png")
