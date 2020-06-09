@@ -4,7 +4,7 @@ from .osuAPI import OsuAPI as User
 from .functions import *
 from .DBFunctions import *
 from .MPComparer import *
-from .GenerateRecentImage import _gen_rs_img, _gen_rb_img
+from .GenerateRecentImage import _gen_r_img
 from .SearchForUser import *
 from .ommfunc import *
 from redbot.core import commands, Config, checks
@@ -482,7 +482,7 @@ class Osu(BaseCog):
                     "**{}** doesn't seem to have a #{} recent play. The latest score I could find was #{}.".format(
                         osu.user, num + 1, len(res)))
                 return
-            code = await _gen_rs_img(self, ctx, num, user, res, userbest, True)
+            code = await _gen_r_img(self, ctx, num, user, res, userbest, True)
             msg = await ctx.send(file=discord.File('cache/score_{}.png'.format(code)))
         await self.config.channel(ctx.channel).rmap.set(res[num]['beatmap_id'])
         await msg.add_reaction("🗺️")
@@ -654,7 +654,7 @@ async def _rpassed(self,ctx,*username_list):
             return
         tempid = res[num]['beatmap_id']
 
-        code = await _gen_rs_img(self,ctx,num,user,apikey,userbest,res,False)
+        code = await _gen_r_img(self,ctx,num,user,apikey,userbest,res,False)
         msg = await ctx.send(file=discord.File('cache/score_{}.png'.format(code)))
     await self.config.channel(ctx.channel).rmap.set(res[num]['beatmap_id'])
     await msg.add_reaction("🗺️")
@@ -696,7 +696,7 @@ async def _rbcommand(self,ctx,*username_list):
             await ctx.send("User not found! :x:")
             return
         res = sorted(temp, key=lambda x: datetime.datetime.strptime(x['date'], '%Y-%m-%d %H:%M:%S'), reverse=True)
-        code = await _gen_rb_img(self,ctx,num,user,apikey,temp,res)
+        code = await _gen_r_img(self,ctx,num,user,temp,res)
         msg = await ctx.send(file=discord.File('cache/score_{}.png'.format(code)))
     await self.config.channel(ctx.channel).rmap.set(res[num]['beatmap_id'])
     await msg.add_reaction("🗺️")

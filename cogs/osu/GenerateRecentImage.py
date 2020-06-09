@@ -14,7 +14,7 @@ import urllib.request
 apikey = os.environ['OSUAPI']
 osu = osu()
 
-async def _gen_rs_img(self,ctx,num,user,res,userbest = None,isTry = False):
+async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
     if isTry:
         trycount = 0
         tempid = res[num]['beatmap_id']
@@ -49,7 +49,11 @@ async def _gen_rs_img(self,ctx,num,user,res,userbest = None,isTry = False):
     else:
         for idx, i in enumerate(userbest):
             if i['beatmap_id'] == res[num]['beatmap_id']:
-                if i['score'] == res[num]['score']:
+                if isTry:
+                    if i['score'] == res[num]['score']:
+                        toprank = idx + 1
+                        break
+                else:
                     toprank = idx + 1
                     break
     self.rtemplate = Image.open("templates/recent.png")
