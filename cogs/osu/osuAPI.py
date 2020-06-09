@@ -27,7 +27,7 @@ class OsuAPI:
         self.header = {"content-type": "application/json", "user-key": self.key}
 
     async def beatmap_embed(self, map_id: str):
-        res, res2 = await self.getBeatmap(res[0]['beatmap_id'], accs=[95, 99, 100])
+        res, res2 = await self.getBeatmap(map_id, accs=[95, 99, 100])
         mapper = res[0]['creator']
         mapperlink = "https://osu.ppy.sh/users/{}".format(res[0]['creator_id'])
         dllink = "https://osu.ppy.sh/d/{}".format(res[0]['beatmapset_id'])
