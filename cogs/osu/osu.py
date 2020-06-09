@@ -301,8 +301,8 @@ class Osu(BaseCog):
         if username == "":
             await ctx.send("Username can't be blank! :x:")
             return
-        res = await use_api(self,ctx,"https://osu.ppy.sh/api/get_user?k={}&u={}".format(apikey,username))
-        if len(res) == 0:
+        res = await self.osu.getUser(user=username)
+        if not user:
             await ctx.send("User not found in osu! database! :x:")
             return
         result = self.db.change_osuid(ctx.author.id,res[0]['user_id'])
@@ -651,14 +651,65 @@ class Osu(BaseCog):
                 await ctx.send(embed=embed)
         os.remove('cache/score_{}.png'.format(code))
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True,aliases=['c'])
     async def compare(self,ctx,*username_list):
         """Compare the last -recent score with your own."""
-        await _cmp(self,ctx,*username_list)
+        rmap = await self.config.channel(ctx.channel).rmap()
+        osu = User(username_list, ctx.author.id)
+        if not osu.user:
+            await ctx.send("**User not set, please set your osu! username using -osuset [Username]. ❌**")
+            return
+        if rmap is None:
+            await ctx.send("**No previous -recent command found for this channel.**")
+            return
+        async with ctx.typing():
+            scores = await osu.getScores(mapid=rmap)
+            if len(scores) == 0:
+                await ctx.send("**No scores found for this map. :x:**")
+                return
+            f = []
+            count = 1
+            for i in scores:
+                mods = str(",".join(num_to_mod(i['enabled_mods'])))
+                if mods == "":
+                    mods = "NoMod"
+                acc = round(calculate_acc(i), 2)
+                mapinfo = await osu.get_pyttanko(map_id=rmap,
+                                                 accs=[acc],
+                                                 misses=int(i['countmiss']),
+                                                 mods=int(i['enabled_mods']),
+                                                 combo=int(i['maxcombo']))
+                f.append("**" + str(count) + "**: **" + mods + "** [**" + str(round(mapinfo['stars'], 2)) + "***]")
+                rank = rank_to_emote(i['rank'])
+                if i['pp'] is None:
+                    pp = round(mapinfo['pp'][0], 2)
+                else:
+                    pp = round(float(i['pp']), 2)
 
-    @commands.command(pass_context=True)
-    async def c(self,ctx,*username_list):
-        await _cmp(self,ctx,*username_list)
+                if int(i['perfect']) == 1:
+                    f.append(" ▸ " + rank + " ▸ **" + str(pp) + "pp** ▸ " + str(acc) + "%")
+                else:
+                    new300 = int(i['count300']) + int(i['countmiss'])
+                    fcstats = {"count50": i['count50'], "count100": i['count100'], "count300": new300, "countmiss": 0}
+                    fcacc = round(calculate_acc(fcstats), 2)
+                    fcinfo = await osu.get_pyttanko(map_id=rmap, accs=[fcacc], mods=int(i['enabled_mods']), fc=True)
+                    fcpp = round(float(fcinfo['pp'][0]), 2)
+                    f.append(" ▸ " + rank + " ▸ **" + str(pp) + "pp** (" + str(fcpp) + "pp for " + str(
+                        fcacc) + "% FC) ▸ " + str(acc) + "%")
+
+                f.append("▸ " + i['score'] + " ▸ x" + i['maxcombo'] + "/" + str(mapinfo['max_combo']) + " ▸ [" + i[
+                    'count300'] + "/" + i['count100'] + "/" + i['count50'] + "/" + i['countmiss'] + "]")
+                timeago = time_ago(datetime.datetime.utcnow() + datetime.timedelta(hours=0),
+                                   datetime.datetime.strptime(i['date'], '%Y-%m-%d %H:%M:%S'))
+                f.append("▸ Score set {} Ago".format(timeago))
+                count += 1
+            embed = discord.Embed(colour=0xD3D3D3, title="", description="\n".join(f))
+            embed.set_author(name=mapinfo['artist'] + " - " + mapinfo['title'] + "[" + mapinfo['version'] + "]",
+                             url="https://osu.ppy.sh/b/{}".format(rmap),
+                             icon_url="https://a.ppy.sh/{}".format(scores[0]['user_id']))
+            tempres = await use_api(self, ctx, "https://osu.ppy.sh/api/get_beatmaps?k={}&b={}".format(apikey, rmap))
+            embed.set_thumbnail(url="https://b.ppy.sh/thumb/" + str(tempres[0]['beatmapset_id']) + "l.jpg")
+            await ctx.send(embed=embed)
 
 # Simpler Commands
     @commands.command(pass_context=True)
@@ -713,56 +764,6 @@ class Osu(BaseCog):
 
     async def refreshdb(self):
         await self.db.refresh()
-
-async def _cmp(self,ctx,*username_list):
-    apikey = await self.config.apikey()
-    rmap = await self.config.channel(ctx.channel).rmap()
-    username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
-    if not username:
-        await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
-        return
-    if rmap is None:
-        await ctx.send("**No previous -recent command found for this channel.**")
-        return
-    async with ctx.typing():
-        scores = await use_api(self,ctx,"https://osu.ppy.sh/api/get_scores?k={}&u={}&b={}".format(apikey,username,rmap))
-        if len(scores) == 0:
-            await ctx.send("**No scores found for this map. :x:**")
-            return
-        f = []
-        count = 1
-        for i in scores:
-            mods = str(",".join(num_to_mod(i['enabled_mods'])))
-            if mods == "":
-                mods = "NoMod"
-            acc = round(calculate_acc(i),2)
-            mapinfo = await get_pyttanko(map_id=rmap,accs=[acc],misses=int(i['countmiss']),mods=int(i['enabled_mods']),combo=int(i['maxcombo']))
-            f.append("**" + str(count) + "**: **" + mods + "** [**" + str(round(mapinfo['stars'],2)) + "***]")
-            rank = rank_to_emote(i['rank'])
-            if i['pp'] is None:
-                pp = round(mapinfo['pp'][0],2)
-            else:
-                pp = round(float(i['pp']),2)
-
-            if int(i['perfect']) == 1:
-                f.append(" ▸ " + rank + " ▸ **" + str(pp) + "pp** ▸ " + str(acc) + "%")
-            else:
-                new300 = int(i['count300']) + int(i['countmiss'])
-                fcstats = { "count50":i['count50'],"count100":i['count100'],"count300":new300,"countmiss":0 }
-                fcacc = round(calculate_acc(fcstats),2)
-                fcinfo = await get_pyttanko(map_id=rmap,accs=[fcacc],mods=int(i['enabled_mods']),fc=True)
-                fcpp = round(float(fcinfo['pp'][0]),2)
-                f.append(" ▸ " + rank + " ▸ **" + str(pp) + "pp** (" + str(fcpp) + "pp for " + str(fcacc) + "% FC) ▸ " + str(acc) + "%")
-
-            f.append("▸ " + i['score'] + " ▸ x" + i['maxcombo'] + "/" + str(mapinfo['max_combo']) + " ▸ [" + i['count300'] + "/" + i['count100'] + "/" + i['count50'] + "/" + i['countmiss'] + "]")
-            timeago = time_ago(datetime.datetime.utcnow() + datetime.timedelta(hours=0), datetime.datetime.strptime(i['date'], '%Y-%m-%d %H:%M:%S'))
-            f.append("▸ Score set {} Ago".format(timeago))
-            count+=1
-        embed = discord.Embed(colour=0xD3D3D3,title="",description="\n".join(f))
-        embed.set_author(name=mapinfo['artist'] + " - " + mapinfo['title'] + "[" + mapinfo['version'] + "]",url="https://osu.ppy.sh/b/{}".format(rmap),icon_url="https://a.ppy.sh/{}".format(scores[0]['user_id']))
-        tempres = await use_api(self,ctx,"https://osu.ppy.sh/api/get_beatmaps?k={}&b={}".format(apikey,rmap))
-        embed.set_thumbnail(url="https://b.ppy.sh/thumb/" + str(tempres[0]['beatmapset_id']) + "l.jpg")
-        await ctx.send(embed=embed)
 
 async def couldNotFind(self,message):
     await message.add_reaction("❓")
