@@ -16,7 +16,7 @@ class OsuAPI:
         self.header = {"content-type": "application/json", "user-key": self.key}
 
     async def mrank(self, ctx, mapID, mapScore):
-        res = await fetch_json(self,"get_scores",f"b={mapID}&limit=100")
+        res = await self.fetch_json(self,"get_scores",f"b={mapID}&limit=100")
         idx = 1
         for score in res:
             if score['user_id'] == userID:
@@ -26,7 +26,7 @@ class OsuAPI:
         return None
 
     async def getUser(self):
-        res = await fetch_json(self,"get_user",f"u={self.user}")
+        res = await self.fetch_json(self,"get_user",f"u={self.user}")
         if len(res) == 0:
             return False
         return res
