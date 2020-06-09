@@ -302,7 +302,7 @@ class Osu(BaseCog):
             await ctx.send("Username can't be blank! :x:")
             return
         res = await self.osu.getUser(user=username)
-        if not user:
+        if not res:
             await ctx.send("User not found in osu! database! :x:")
             return
         result = self.db.change_osuid(ctx.author.id,res[0]['user_id'])
