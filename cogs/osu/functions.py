@@ -5,7 +5,6 @@ import os
 import math
 import aiohttp
 import asyncio
-import pyoppai
 import decimal
 import textwrap
 import json
@@ -260,30 +259,6 @@ def determine_plural(number):
     else:
         return ''
 
-async def get_sr(self, mapID, mods):
-    if mapID in self.maps:
-        return self.maps[mapID]['stars']
-    url = 'https://osu.ppy.sh/osu/{}'.format(mapID)
-    ctx = pyoppai.new_ctx()
-    b = pyoppai.new_beatmap(ctx)
-
-    BUFSIZE = 2000000
-    buf = pyoppai.new_buffer(BUFSIZE)
-
-    file_path = self.defaultPath + 'maps/{}.osu'.format(mapID)
-    await download_file(url, file_path)
-    pyoppai.parse(file_path, b, buf, BUFSIZE, True, self.defaultPath + 'cache/')
-    dctx = pyoppai.new_d_calc_ctx(ctx)
-    pyoppai.apply_mods(b, int(mods))
-
-    stars, aim, speed, _, _, _, _ = pyoppai.d_calc(dctx, b)
-    pyoppai_json = {
-        'stars' : stars
-    }
-
-    os.remove(file_path)
-    return stars
-
 async def beatmap_embed(self,key,map_id: str):
     res = await try_api(self,f"https://osu.ppy.sh/api/get_beatmaps?k={key}&b={map_id}")
     res2 = await get_pyttanko(res[0]['beatmap_id'],accs=[95,99,100])
@@ -323,160 +298,34 @@ async def beatmap_embed(self,key,map_id: str):
     embed.add_field(name="**{}**".format(res[0]['version']),value="\n".join(f), inline=False)
     return embed
 
-async def get_pyttanko(map_id:str, accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None, plot = False, color = 'blue'):
-    url = 'https://osu.ppy.sh/osu/{}'.format(map_id)
-    file_path = 'temp/{}.osu'.format(map_id)
-    await download_file(url, file_path)
-    bmap = pyttanko.parser().map(open(file_path))
-    _, ar, od, cs, hp = pyttanko.mods_apply(mods, ar=bmap.ar, od=bmap.od, cs=bmap.cs, hp=bmap.hp)
-    stars = pyttanko.diff_calc().calc(bmap, mods=mods)
-    bmap.stars = stars.total
-    bmap.aim_stars = stars.aim
-    bmap.speed_stars = stars.speed
-
-    if not combo:
-        combo = bmap.max_combo()
-
-    bmap.pp = []
-    bmap.aim_pp = []
-    bmap.speed_pp = []
-    bmap.acc_pp = []
-
-    bmap.acc = accs
-
-    for acc in accs:
-        n300, n100, n50 = pyttanko.acc_round(acc, len(bmap.hitobjects), misses)
-        pp, aim_pp, speed_pp, acc_pp, _ = pyttanko.ppv2(
-            bmap.aim_stars, bmap.speed_stars, bmap=bmap, mods=mods,
-            n300=n300, n100=n100, n50=n50, nmiss=misses, combo=combo)
-        bmap.pp.append(pp)
-        bmap.aim_pp.append(aim_pp)
-        bmap.speed_pp.append(speed_pp)
-        bmap.acc_pp.append(acc_pp)
-    if fc:
-        n300, n100, n50 = pyttanko.acc_round(fc, len(bmap.hitobjects), 0)
-        # print("-------------", n300, n100, n50)
-        fc_pp, _, _, _, _ = pyttanko.ppv2(
-            bmap.aim_stars, bmap.speed_stars, bmap=bmap, mods=mods,
-            n300=n300 + misses, n100=n100, n50=n50, nmiss=0, combo=bmap.max_combo())
-
-    pyttanko_json = {
-        'version': bmap.version,
-        'title': bmap.title,
-        'artist': bmap.artist,
-        'creator': bmap.creator,
-        'combo': combo,
-        'max_combo': bmap.max_combo(),
-        'misses': misses,
-        'mode': bmap.mode,
-        'stars': bmap.stars,
-        'aim_stars': bmap.aim_stars,
-        'speed_stars': bmap.speed_stars,
-        'pp': bmap.pp, # list
-        'aim_pp': bmap.aim_pp,
-        'speed_pp': bmap.speed_pp,
-        'acc_pp': bmap.acc_pp,
-        'acc': bmap.acc, # list
-        'cs': cs,
-        'od': od,
-        'ar': ar,
-        'hp': hp
-        }
-
-    if completion:
-        try:
-            pyttanko_json['map_completion'] = (completion / len(bmap.hitobjects)) * 100
-        except:
-            pyttanko_json['map_completion'] = "Error"
-    if plot:
-        #try:
-        pyttanko_json['graph_url'] = await plot_map_stars(file_path, mods, color)
-        # print(pyttanko_json['graph_url'])
-        #except:
-            #pass
-        # print(pyttanko_json['graph_url'])
-
-    os.remove(file_path)
-    return pyttanko_json
-
-async def download_file(url, filename):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            with open(filename, 'wb') as f:
-                while True:
-                    chunk = await response.content.read(1024)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-            return await response.release()
-
-async def plot_map_stars(beatmap, mods, color = 'blue'):
-    #try:
-    star_list, speed_list, aim_list, time_list = [], [], [], []
-    results = oppai(beatmap, mods=mods)
-    for chunk in results:
-        time_list.append(chunk['time'])
-        star_list.append(chunk['stars'])
-        aim_list.append(chunk['aim_stars'])
-        speed_list.append(chunk['speed_stars'])
-    fig = plt.figure(figsize=(6, 2))
-    ax = fig.add_subplot(111)
-    plt.style.use('ggplot')
-    ax.plot(time_list, star_list, color=color, label='Stars', linewidth=2)
-    fig.gca().xaxis.set_major_formatter(ticker.FuncFormatter(plot_time_format))
-    # plt.ylabel('Stars')
-    ax.legend(loc='best')
-    fig.tight_layout()
-    ax.xaxis.label.set_color(color)
-    ax.yaxis.label.set_color(color)
-    ax.tick_params(axis='both', colors=color, labelcolor = color)
-    ax.grid(color='w', linestyle='-', linewidth=1)
-
-    img_id = random.randint(0, 50)
-    filepath = "map_{}.png".format(img_id)
-    fig.savefig(filepath, transparent=True)
-    plt.close()
-    upload = cloudinary.uploader.upload(filepath)
-    url = upload['url']
-    os.remove(filepath)
-    # print(url)
-    return url
-
-async def use_api(self,ctx,url):
-    async with aiohttp.ClientSession(headers=self.header) as session:
-        try:
-            async with session.get(url) as channel:
-                res = await channel.json()
-                return res
-        except Exception as e:
-            await ctx.send("Error: {}".format(str(e)))
-            return
-
-async def fetch_json(url):
-    async with aiohttp.ClientSession(headers={"User-Agent": "User_Agent"}) as session:
-        try:
-            async with session.get(url) as channel:
-                res = await channel.json()
-                return res
-        except Exception as e:
-            return False
-
-async def try_api(self,url):
-    async with aiohttp.ClientSession(headers=self.header) as session:
-        try:
-            async with session.get(url) as channel:
-                res = await channel.json()
-                return res
-        except Exception as e:
-            await print("Error: {}".format(str(e)))
-            return None
-
-async def get_username(self,ctx,id):
-    apikey = await self.config.apikey()
-    async with aiohttp.ClientSession(headers=self.header) as session:
-        try:
-            async with session.get("https://osu.ppy.sh/api/get_user?u={}&k={}".format(id,apikey)) as channel:
-                res = await channel.json()
-                return res[0]['username']
-        except Exception as e:
-            return False
+# async def plot_map_stars(beatmap, mods, color = 'blue'):
+#     #try:
+#     star_list, speed_list, aim_list, time_list = [], [], [], []
+#     results = oppai(beatmap, mods=mods)
+#     for chunk in results:
+#         time_list.append(chunk['time'])
+#         star_list.append(chunk['stars'])
+#         aim_list.append(chunk['aim_stars'])
+#         speed_list.append(chunk['speed_stars'])
+#     fig = plt.figure(figsize=(6, 2))
+#     ax = fig.add_subplot(111)
+#     plt.style.use('ggplot')
+#     ax.plot(time_list, star_list, color=color, label='Stars', linewidth=2)
+#     fig.gca().xaxis.set_major_formatter(ticker.FuncFormatter(plot_time_format))
+#     # plt.ylabel('Stars')
+#     ax.legend(loc='best')
+#     fig.tight_layout()
+#     ax.xaxis.label.set_color(color)
+#     ax.yaxis.label.set_color(color)
+#     ax.tick_params(axis='both', colors=color, labelcolor = color)
+#     ax.grid(color='w', linestyle='-', linewidth=1)
+#
+#     img_id = random.randint(0, 50)
+#     filepath = "map_{}.png".format(img_id)
+#     fig.savefig(filepath, transparent=True)
+#     plt.close()
+#     upload = cloudinary.uploader.upload(filepath)
+#     url = upload['url']
+#     os.remove(filepath)
+#     # print(url)
+#     return url

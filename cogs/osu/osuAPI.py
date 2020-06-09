@@ -6,6 +6,7 @@ import json
 import datetime
 import random
 import matplotlib.pyplot as plt
+import pyoppai
 from bs4 import BeautifulSoup
 
 from .DBFunctions import *
@@ -57,7 +58,7 @@ class OsuAPI:
         plt.close()
         return file, 'rank_{}.png'.format(img_id)
 
-    async def mrank(self, ctx, mapID, mapScore):
+    async def mrank(self, mapID, mapScore):
         res = await self.fetch_json("get_scores",f"b={mapID}&limit=100")
         idx = 1
         for score in res:
@@ -67,11 +68,85 @@ class OsuAPI:
             idx += 1
         return None
 
+    async def getBeatmap(self,mapid):
+        ptnko = await self.get_pyttanko(mapid)
+        res = await self.fetch_json("get_beatmaps",f"b={mapid}")
+        return ptnko, res
+
     async def getUser(self):
         res = await self.fetch_json("get_user",f"u={self.user}")
         if len(res) == 0:
             return False
         return res
+
+    async def get_pyttanko(self, map_id: str, accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None, color='blue'):
+        url = 'https://osu.ppy.sh/osu/{}'.format(map_id)
+        file_path = 'temp/{}.osu'.format(map_id)
+        await self.download_file(url, file_path)
+        bmap = pyttanko.parser().map(open(file_path))
+        _, ar, od, cs, hp = pyttanko.mods_apply(mods, ar=bmap.ar, od=bmap.od, cs=bmap.cs, hp=bmap.hp)
+        stars = pyttanko.diff_calc().calc(bmap, mods=mods)
+        bmap.stars = stars.total
+        bmap.aim_stars = stars.aim
+        bmap.speed_stars = stars.speed
+
+        if not combo:
+            combo = bmap.max_combo()
+
+        bmap.pp = []
+        bmap.aim_pp = []
+        bmap.speed_pp = []
+        bmap.acc_pp = []
+
+        bmap.acc = accs
+
+        for acc in accs:
+            n300, n100, n50 = pyttanko.acc_round(acc, len(bmap.hitobjects), misses)
+            pp, aim_pp, speed_pp, acc_pp, _ = pyttanko.ppv2(
+                bmap.aim_stars, bmap.speed_stars, bmap=bmap, mods=mods,
+                n300=n300, n100=n100, n50=n50, nmiss=misses, combo=combo)
+            bmap.pp.append(pp)
+            bmap.aim_pp.append(aim_pp)
+            bmap.speed_pp.append(speed_pp)
+            bmap.acc_pp.append(acc_pp)
+        if fc:
+            n300, n100, n50 = pyttanko.acc_round(fc, len(bmap.hitobjects), 0)
+            # print("-------------", n300, n100, n50)
+            fc_pp, _, _, _, _ = pyttanko.ppv2(
+                bmap.aim_stars, bmap.speed_stars, bmap=bmap, mods=mods,
+                n300=n300 + misses, n100=n100, n50=n50, nmiss=0, combo=bmap.max_combo())
+
+        pyttanko_json = {
+            'version': bmap.version,
+            'title': bmap.title,
+            'artist': bmap.artist,
+            'creator': bmap.creator,
+            'combo': combo,
+            'max_combo': bmap.max_combo(),
+            'misses': misses,
+            'mode': bmap.mode,
+            'stars': bmap.stars,
+            'aim_stars': bmap.aim_stars,
+            'speed_stars': bmap.speed_stars,
+            'pp': bmap.pp,  # list
+            'aim_pp': bmap.aim_pp,
+            'speed_pp': bmap.speed_pp,
+            'acc_pp': bmap.acc_pp,
+            'acc': bmap.acc,  # list
+            'cs': cs,
+            'od': od,
+            'ar': ar,
+            'hp': hp
+        }
+
+        if completion:
+            try:
+                pyttanko_json['map_completion'] = (completion / len(bmap.hitobjects)) * 100
+            except:
+                pyttanko_json['map_completion'] = "Error"
+
+        os.remove(file_path)
+        return pyttanko_json
 
     async def fetch_json(self,type,params = ""):
         async with aiohttp.ClientSession(headers=self.header) as session:
@@ -81,3 +156,14 @@ class OsuAPI:
                     return res
             except Exception as e:
                 return e
+
+    async def download_file(self, url, filename):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                with open(filename, 'wb') as f:
+                    while True:
+                        chunk = await response.content.read(1024)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                return await response.release()
