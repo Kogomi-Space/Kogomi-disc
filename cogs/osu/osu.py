@@ -664,7 +664,7 @@ class Osu(BaseCog):
             return
         async with ctx.typing():
             scores = await osu.getScores(mapid=rmap)
-            if len(scores) == 0:
+            if not scores:
                 await ctx.send("**No scores found for this map. :x:**")
                 return
             f = []
