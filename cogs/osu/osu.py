@@ -707,7 +707,7 @@ class Osu(BaseCog):
             embed.set_author(name=mapinfo['artist'] + " - " + mapinfo['title'] + "[" + mapinfo['version'] + "]",
                              url="https://osu.ppy.sh/b/{}".format(rmap),
                              icon_url="https://a.ppy.sh/{}".format(scores[0]['user_id']))
-            tempres = await use_api(self, ctx, "https://osu.ppy.sh/api/get_beatmaps?k={}&b={}".format(apikey, rmap))
+            _, tempres = await osu.getBeatmap(mapid=rmap)
             embed.set_thumbnail(url="https://b.ppy.sh/thumb/" + str(tempres[0]['beatmapset_id']) + "l.jpg")
             await ctx.send(embed=embed)
 

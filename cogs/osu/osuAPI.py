@@ -125,7 +125,10 @@ class OsuAPI:
                 return {}
 
     async def getBeatmap(self,mapid,accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None):
-        ptnko = await self.get_pyttanko(mapid,accs,mods,misses,combo,completion,fc)
+        try:
+            ptnko = await self.get_pyttanko(mapid,accs,mods,misses,combo,completion,fc)
+        except:
+            ptnko = False
         res = await self.fetch_json("get_beatmaps",f"b={mapid}")
         return ptnko, res
 
