@@ -322,26 +322,26 @@ class Osu(BaseCog):
             await ctx.send("**User not set, please set your osu! username using -osuset [Username]. ❌**")
             return
 
-        osu = await osu.getUser()
+        res = await osu.getUser()
 
-        if osu:
+        if res:
             # Build Embed
             embed = discord.Embed()
-            embed.title = osu[0]["username"]
-            embed.url = "https://osu.ppy.sh/u/{}".format(osu[0]["user_id"])
+            embed.title = res[0]["username"]
+            embed.url = "https://osu.ppy.sh/u/{}".format(res[0]["user_id"])
             embed.set_footer(text="Powered by osu!")
-            embed.add_field(name="Join date", value=osu[0]["join_date"][:10])
-            embed.add_field(name="Accuracy", value=osu[0]["accuracy"][:6])
-            embed.add_field(name="Level", value=osu[0]["level"][:5])
-            embed.add_field(name="Ranked score", value=osu[0]["ranked_score"])
-            embed.add_field(name="Rank", value=osu[0]["pp_rank"])
-            embed.add_field(name="Country rank ({})".format(osu[0]["country"]), value=osu[0]["pp_country_rank"])
-            embed.add_field(name="Playcount", value=osu[0]["playcount"])
-            embed.add_field(name="Total score", value=osu[0]["total_score"])
-            embed.add_field(name="Total seconds played", value=osu[0]["total_seconds_played"])
-            file, rankgraph = await rank_graph(osu[0]['user_id'],0)
+            embed.add_field(name="Join date", value=res[0]["join_date"][:10])
+            embed.add_field(name="Accuracy", value=res[0]["accuracy"][:6])
+            embed.add_field(name="Level", value=res[0]["level"][:5])
+            embed.add_field(name="Ranked score", value=res[0]["ranked_score"])
+            embed.add_field(name="Rank", value=res[0]["pp_rank"])
+            embed.add_field(name="Country rank ({})".format(res[0]["country"]), value=res[0]["pp_country_rank"])
+            embed.add_field(name="Playcount", value=res[0]["playcount"])
+            embed.add_field(name="Total score", value=res[0]["total_score"])
+            embed.add_field(name="Total seconds played", value=res[0]["total_seconds_played"])
+            file, rankgraph = await osu.rank_graph(0)
             embed.set_image(url='attachment://{}'.format(rankgraph))
-            embed.set_thumbnail(url="https://a.ppy.sh/{}".format(osu[0]["user_id"]))
+            embed.set_thumbnail(url="https://a.ppy.sh/{}".format(res[0]["user_id"]))
             await ctx.send(file=file,embed=embed)
         else:
             await ctx.send("No results.")
