@@ -589,9 +589,67 @@ class Osu(BaseCog):
                 await ctx.send(embed=embed)
         os.remove('cache/score_{}.png'.format(code))
 
-    @commands.command(pass_context=True)
-    async def rpassed(self,ctx,*username_list):
-        await _rpassed(self,ctx,*username_list)
+    @commands.command(pass_context=True,aliases=['rpassed'])
+    async def recentpassed(self,ctx,*username_list):
+        try:
+            if username_list[0].isdigit():
+                num = int(username_list[0]) - 1
+                username_list = username_list[1:]
+            else:
+                num = 0
+        except:
+            num = 0
+            pass
+        osu = User(username_list, ctx.author.id)
+        if not osu.user:
+            await ctx.send("**User not set, please set your osu! username using -osuset [Username]. ❌**")
+            return
+        async with ctx.typing():
+            user = await osu.getUser()
+            if not user:
+                await ctx.send("User not found! :x:")
+                return
+            userbest = await osu.getUserBest()
+            if not userbest:
+                await ctx.send("User not found! :x:")
+                return
+            res = await osu.getUserRecent()
+            if not res:
+                await ctx.send("No recent plays found for {}. :x:".format(osu.user))
+                return
+            while True:
+                if len(res) <= num:
+                    break
+                elif res[num]['rank'] == "F":
+                    num += 1
+                else:
+                    break
+            if len(res) <= num:
+                await ctx.send(
+                    "**{}** doesn't seem to have a #{} recent play. The latest score I could find was #{}.".format(
+                        osu.user, num + 1, len(res)))
+                return
+            tempid = res[num]['beatmap_id']
+
+            code = await _gen_r_img(self, ctx, num, user, apikey, res, userbest, False)
+            msg = await ctx.send(file=discord.File('cache/score_{}.png'.format(code)))
+
+        await self.config.channel(ctx.channel).rmap.set(res[num]['beatmap_id'])
+        await msg.add_reaction("🗺️")
+
+        def check(reaction, user):
+            return self.bot.user != user and msg.channel == reaction.message.channel and str(reaction.emoji) == '🗺️'
+
+        try:
+            reaction, user = await self.bot.wait_for('reaction_add', timeout=600.0, check=check)
+        except asyncio.TimeoutError:
+            await msg.remove_reaction('🗺️', self.bot.user)
+
+        else:
+            async with ctx.typing():
+                embed = await osu.beatmap_embed(self, map_id=[num]['beatmap_id'])
+                await ctx.send(embed=embed)
+        os.remove('cache/score_{}.png'.format(code))
 
     @commands.command(pass_context=True)
     async def compare(self,ctx,*username_list):
@@ -655,63 +713,6 @@ class Osu(BaseCog):
 
     async def refreshdb(self):
         await self.db.refresh()
-
-async def _rpassed(self,ctx,*username_list):
-    apikey = await self.config.apikey()
-    try:
-        if username_list[0].isdigit():
-            num = int(username_list[0]) - 1
-            username_list = username_list[1:]
-        else:
-            num = 0
-    except:
-        num = 0
-        pass
-    username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
-    if not username:
-        await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
-        return
-    async with ctx.typing():
-        user = await use_api(self,ctx,"https://osu.ppy.sh/api/get_user?k={}&u={}".format(apikey,username))
-        if len(user) == 0:
-            await ctx.send("User not found! :x:")
-            return
-        userbest = await use_api(self,ctx,"https://osu.ppy.sh/api/get_user_best?k={}&u={}&limit=100".format(apikey,username))
-        if len(userbest) == 0:
-            await ctx.send("User not found! :x:")
-            return
-        res = await use_api(self,ctx,"https://osu.ppy.sh/api/get_user_recent?k={}&u={}".format(apikey,username))
-        if len(res) == 0:
-            await ctx.send("No recent plays found for {}. :x:".format(username))
-            return
-        while(True):
-            if len(res) <= num:
-                break
-            elif res[num]['rank'] == "F":
-                num += 1
-            else:
-                break
-        if len(res) <= num:
-            await ctx.send("**{}** doesn't seem to have a #{} recent play. The latest score I could find was #{}.".format(username,num + 1,len(res)))
-            return
-        tempid = res[num]['beatmap_id']
-
-        code = await _gen_r_img(self,ctx,num,user,apikey,userbest,res,False)
-        msg = await ctx.send(file=discord.File('cache/score_{}.png'.format(code)))
-    await self.config.channel(ctx.channel).rmap.set(res[num]['beatmap_id'])
-    await msg.add_reaction("🗺️")
-    def check(reaction, user):
-        return self.bot.user != user and msg.channel == reaction.message.channel and str(reaction.emoji) == '🗺️'
-    try:
-        reaction, user = await self.bot.wait_for('reaction_add', timeout=600.0,check=check)
-    except asyncio.TimeoutError:
-        await msg.remove_reaction('🗺️',self.bot.user)
-
-    else:
-        async with ctx.typing():
-            embed = await beatmap_embed(self,apikey,res[num]['beatmap_id'])
-            await ctx.send(embed=embed)
-    os.remove('cache/score_{}.png'.format(code))
 
 async def _cmp(self,ctx,*username_list):
     apikey = await self.config.apikey()
