@@ -631,7 +631,7 @@ class Osu(BaseCog):
                 return
             tempid = res[num]['beatmap_id']
 
-            code = await _gen_r_img(self, ctx, num, user, apikey, res, userbest, False)
+            code = await _gen_r_img(self, ctx, num, user, res, userbest, False)
             msg = await ctx.send(file=discord.File('cache/score_{}.png'.format(code)))
 
         await self.config.channel(ctx.channel).rmap.set(res[num]['beatmap_id'])
