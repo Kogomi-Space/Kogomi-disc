@@ -150,6 +150,7 @@ class OsuAPI:
         if len(res) == 0:
             return False
         return res
+
     async def getMatch(self,mp):
         res = await self.fetch_json("get_match",f"mp={mp}")
         if len(res) == 0:

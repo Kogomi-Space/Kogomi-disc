@@ -475,12 +475,12 @@ class Osu(BaseCog):
                 return
             res = await osu.getUserRecent()
             if not res:
-                await ctx.send("No recent plays found for {}. :x:".format(username))
+                await ctx.send("No recent plays found for {}. :x:".format(osu.user))
                 return
             if len(res) <= num:
                 await ctx.send(
                     "**{}** doesn't seem to have a #{} recent play. The latest score I could find was #{}.".format(
-                        username, num + 1, len(res)))
+                        osu.user, num + 1, len(res)))
                 return
             code = await _gen_rs_img(self, ctx, num, user, apikey, userbest, res, True)
             msg = await ctx.send(file=discord.File('cache/score_{}.png'.format(code)))
