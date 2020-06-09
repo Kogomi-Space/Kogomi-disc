@@ -465,7 +465,7 @@ class Osu(BaseCog):
             await ctx.send("**User not set, please set your osu! username using -osuset [Username]. ❌**")
             return
         async with ctx.typing():
-            user = osu.getUser()
+            user = await osu.getUser()
             if len(user) == 0:
                 await ctx.send("User not found! :x:")
                 return
