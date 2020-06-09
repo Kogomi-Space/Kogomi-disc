@@ -26,6 +26,49 @@ class OsuAPI:
         self.key = os.environ['OSUAPI']
         self.header = {"content-type": "application/json", "user-key": self.key}
 
+    async def beatmap_embed(self, map_id: str):
+        res, res2 = await self.getBeatmap(res[0]['beatmap_id'], accs=[95, 99, 100])
+        mapper = res[0]['creator']
+        mapperlink = "https://osu.ppy.sh/users/{}".format(res[0]['creator_id'])
+        dllink = "https://osu.ppy.sh/d/{}".format(res[0]['beatmapset_id'])
+        bclink = "https://bloodcat.com/osu/s/{}".format(res[0]['beatmapset_id'])
+        preview = "https://bloodcat.com/osu/preview.html#{}".format(res[0]['beatmap_id'])
+        embed = discord.Embed(
+            description="by [{}]({})\nDownload: [official]({}) ([no vid]({}n)) [bloodcat]({}), [Map Preview]({})".format(
+                mapper, mapperlink, dllink, dllink, bclink, preview), color=0x00ffff)
+        embed.set_author(name="{} - {}".format(res[0]['artist'], res[0]['title']),
+                         url="https://osu.ppy.sh/beatmapsets/{}#osu/{}".format(res[0]['beatmapset_id'],
+                                                                               res[0]['beatmap_id']))
+        embed.set_thumbnail(url="https://b.ppy.sh/thumb/{}l.jpg".format(res[0]['beatmapset_id']))
+        lnth = float(res[0]['total_length'])
+        bpm = str(round(float(res[0]['bpm']), 2)).rstrip("0")
+        if bpm.endswith("."):
+            bpm = bpm[:-1]
+        length = str(datetime.timedelta(seconds=lnth))
+        if length[:1] == "0":
+            length = length[2:]
+        ar = str(round(res2['ar'], 2)).rstrip("0")
+        if bpm.endswith("."):
+            bpm = bpm[:-1]
+        if ar.endswith("."):
+            ar = ar[:-1]
+        od = str(round(res2['od'], 2)).rstrip("0")
+        if od.endswith("."):
+            od = od[:-1]
+        cs = str(round(res2['cs'], 2)).rstrip("0")
+        if cs.endswith("."):
+            cs = cs[:-1]
+        hp = str(round(res2['hp'], 2)).rstrip("0")
+        if hp.endswith("."):
+            hp = hp[:-1]
+        f = []
+        f.append(f"◆ {round(float(res2['stars']), 2)}***** ◆ **Length:** {length} ◆ {round(float(bpm), 2)} **BPM**")
+        f.append(f"◆ **AR** {ar} ◆ **OD** {od} ◆ **HP** {hp} ◆ **CS** {cs}")
+        f.append(
+            f"◆ **{round(float(res2['pp'][0]), 2)}pp** for 95% ◆ **{round(float(res2['pp'][1]), 2)}pp** for 99% ◆ **{round(float(res2['pp'][2]), 2)}pp** for SS")
+        embed.add_field(name="**{}**".format(res[0]['version']), value="\n".join(f), inline=False)
+        return embed
+
     async def rank_graph(self,mode=0):
         md = 'osu'
         if mode == '1': md = 'taiko'
@@ -70,8 +113,17 @@ class OsuAPI:
             idx += 1
         return None
 
-    async def getBeatmap(self,mapid):
-        ptnko = await self.get_pyttanko(mapid)
+    async def bloodcat(self,search,params):
+        async with aiohttp.ClientSession(headers=self.header) as session:
+            try:
+                async with session.get(f"https://bloodcat.com/osu/?mod=json&q={search}{params}") as channel:
+                    res = await channel.json()
+                    return res
+            except Exception as e:
+                return {}
+
+    async def getBeatmap(self,mapid, accs=[100]):
+        ptnko = await self.get_pyttanko(mapid,accs)
         res = await self.fetch_json("get_beatmaps",f"b={mapid}")
         return ptnko, res
 
