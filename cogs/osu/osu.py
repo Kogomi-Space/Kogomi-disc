@@ -322,7 +322,7 @@ class Osu(BaseCog):
             await ctx.send("**User not set, please set your osu! username using -osuset [Username]. ❌**")
             return
 
-        osu = osu.getUser()
+        osu = await osu.getUser()
 
         if osu:
             # Build Embed
