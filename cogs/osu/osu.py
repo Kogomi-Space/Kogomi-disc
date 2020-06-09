@@ -46,6 +46,7 @@ class Osu(BaseCog):
         self.header = {"User-Agent": "User_Agent"}
         self.template = Image.open("templates/template.png")
         self.rtemplate = Image.open("templates/recent.png")
+        self.osu = User()
         self.config = Config.get_conf(self, identifier=842364413)
         default_global = {
             "apikey": None
@@ -236,8 +237,7 @@ class Osu(BaseCog):
             modnum = 16
         elif mods == "dt":
             modnum = 64
-        osu = User()
-        res, res2 = await osu.getBeatmap(mapid=mapID)
+        res, res2 = await self.osu.getBeatmap(mapid=mapID)
         if mods == "dt":
             lnth = round(float(res2[0]['total_length']) / 1.5)
             bpm = str(round(float(res2[0]['bpm']) * 1.5,2)).rstrip("0")
@@ -348,7 +348,6 @@ class Osu(BaseCog):
     @commands.command(pass_context=True,aliases=['mc'])
     async def match_costs(self,ctx,url,warmups=2):
         """Shows how well each player did in a multi lobby."""
-        apikey = await self.config.apikey()
         if 'https://osu.ppy.sh/community/matches' in url:
             try:
                 url = url.split("matches/")
@@ -357,7 +356,7 @@ class Osu(BaseCog):
                 return
             url = url[1]
         async with ctx.typing():
-            res = await use_api(self, ctx, "https://osu.ppy.sh/api/get_match?k={}&mp={}".format(apikey, url))
+            res = await self.osu.getMatch(mp=url)
             if res['match'] == 0:
                 await ctx.send("Invalid URL! :x:")
                 return
@@ -404,7 +403,7 @@ class Osu(BaseCog):
                 f.append(":blue_circle: **Blue Team** :blue_circle:")
                 for index, player in enumerate(userlist0):
                     try:
-                        username = await get_username(self, ctx, player)
+                        username = await self.osu.getUser(user=player)[0]['username']
                     except:
                         username = player + " (Banned)"
                     f.append("**{}**: {:15} - **{:0.2f}**".format(index + 1, username, pointlist0[index]))

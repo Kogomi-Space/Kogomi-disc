@@ -75,8 +75,14 @@ class OsuAPI:
         res = await self.fetch_json("get_beatmaps",f"b={mapid}")
         return ptnko, res
 
-    async def getUser(self):
-        res = await self.fetch_json("get_user",f"u={self.user}")
+    async def getUser(self,user=self.user):
+        res = await self.fetch_json("get_user",f"u={user}")
+        if len(res) == 0:
+            return False
+        return res
+
+    async def getMatch(self,mp):
+        res = await self.fetch_json("get_match",f"mp={mp}")
         if len(res) == 0:
             return False
         return res
@@ -157,7 +163,7 @@ class OsuAPI:
                     res = await channel.json()
                     return res
             except Exception as e:
-                return e
+                return {}
 
     async def download_file(self, url, filename):
         async with aiohttp.ClientSession() as session:
