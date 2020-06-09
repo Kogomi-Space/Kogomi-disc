@@ -103,7 +103,9 @@ class OsuAPI:
         plt.close()
         return file, 'rank_{}.png'.format(img_id)
 
-    async def mrank(self, mapID, mapScore):
+    async def mrank(self, mapID, mapScore,user=False):
+        if not user:
+            user = self.user
         res = await self.fetch_json("get_scores",f"b={mapID}&limit=100")
         idx = 1
         for score in res:

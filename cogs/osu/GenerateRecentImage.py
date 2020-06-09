@@ -3,7 +3,7 @@ import os
 import asyncio
 import textwrap
 import random
-from .osuAPI import OsuAPI as osu
+from .osuAPI import OsuAPI as User
 import aggdraw
 import time
 import pycountry
@@ -12,9 +12,9 @@ import datetime
 from PIL import Image, ImageDraw, ImageFont
 import urllib.request
 apikey = os.environ['OSUAPI']
-osu = osu()
 
 async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
+    osu = User(user[0]['user_id'])
     if isTry:
         trycount = 0
         tempid = res[num]['beatmap_id']
@@ -42,7 +42,7 @@ async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
         mods = "+" + mods
     titleText = "{} - {}".format(bmapinfo['artist'], bmapinfo['title'])
     subtitleText = "[" + bmapinfo['version']
-    maprank = await mrank(self, ctx, res[num]['beatmap_id'], res[num]['score'], user[0]['user_id'])
+    maprank = await osu.mrank(mapID=res[num]['beatmap_id'], mapScore=[num]['score'])
     toprank = None
     if not userbest:
         pass
