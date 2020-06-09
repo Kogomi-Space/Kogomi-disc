@@ -83,7 +83,7 @@ class OsuAPI:
 
     async def get_pyttanko(self, map_id: str, accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None, color='blue'):
         url = 'https://osu.ppy.sh/osu/{}'.format(map_id)
-        file_path = os.getcwd() + '/data/temp/{}.osu'.format(map_id)
+        file_path = os.getcwd() + '/temp/{}.osu'.format(map_id)
         await self.download_file(url, file_path)
         bmap = pyttanko.parser().map(open(file_path))
         _, ar, od, cs, hp = pyttanko.mods_apply(mods, ar=bmap.ar, od=bmap.od, cs=bmap.cs, hp=bmap.hp)
