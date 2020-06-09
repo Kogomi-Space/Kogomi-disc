@@ -514,7 +514,7 @@ class Osu(BaseCog):
                 return
             res = await osu.getUserRecent()
             if not res:
-                await ctx.send("No recent plays found for {}. :x:".format(username))
+                await ctx.send("No recent plays found for {}. :x:".format(osu.user))
                 return
             embed = discord.Embed(
                 description="Recent scores for [{}](https://osu.ppy.sh/users/{})".format(user[0]['username'],
