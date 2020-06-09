@@ -12,6 +12,7 @@ import random
 import time
 import pycountry
 import matplotlib.pyplot as plt
+import numpy as np
 from bs4 import BeautifulSoup
 from collections import OrderedDict
 import datetime

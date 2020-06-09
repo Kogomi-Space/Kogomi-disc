@@ -21,7 +21,6 @@ import pytesseract
 import random
 import pyttanko
 import aggdraw
-import numpy as np
 import time
 import pycountry
 import matplotlib.pyplot as plt
