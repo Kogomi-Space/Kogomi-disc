@@ -260,40 +260,6 @@ def determine_plural(number):
     else:
         return ''
 
-async def rank_graph(userID,mode = 0):
-    md = 'osu'
-    if mode == '1': md = 'taiko'
-    if mode == '2': md = 'fruits'
-    if mode == '3': md = 'mania'
-    async with aiohttp.ClientSession() as session:
-        async with session.get('https://osu.ppy.sh/users/{}/{}'.format(userID,md)) as resp:
-            text = await resp.read()
-            res = BeautifulSoup(text.decode('utf-8'),'lxml')
-    script = res.find("script", {"id": "json-user"}, type='application/json')
-    web_data = json.loads(script.text)
-    rank_data = web_data['rankHistory']['data']
-    base = datetime.datetime.today()
-    date_list = [base - datetime.timedelta(days=x) for x in range(0, 90)]
-    date_list = date_list[::-1]
-    fig = plt.figure(figsize=(8, 2))
-    ax = fig.add_subplot(111)
-    plt.style.use('ggplot')
-    color = 'yellow'
-    ax.plot(date_list, rank_data, color=color, linewidth=3.0)
-    ax.tick_params(axis='y', colors=color, labelcolor = color)
-    ax.yaxis.label.set_color(color)
-    ax.grid(color='w', linestyle='-', axis='y', linewidth=1)
-    fig.tight_layout()
-    rank_range = max(rank_data) - min(rank_data)
-    plt.ylim(max(rank_data) + int(.15*rank_range), min(rank_data) - int(.15*rank_range))
-    plt.xticks([])
-    img_id = random.randint(0, 50)
-    filepath = 'cache/rank_{}.png'.format(img_id)
-    fig.savefig(filepath, transparent=True)
-    file = discord.File(f'cache/rank_{img_id}.png','rank_{}.png'.format(img_id))
-    plt.close()
-    return file, 'rank_{}.png'.format(img_id)
-
 async def get_sr(self, mapID, mods):
     if mapID in self.maps:
         return self.maps[mapID]['stars']
