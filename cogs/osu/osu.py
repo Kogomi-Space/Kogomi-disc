@@ -412,7 +412,8 @@ class Osu(BaseCog):
                 f.append(":red_circle: **Red Team** :red_circle:")
                 for index, player in enumerate(userlist1):
                     try:
-                        username = await get_username(self, ctx, player)
+                        username = await self.osu.getUser(user=player)
+                        username = username[0]['username']
                     except:
                         username = player + " (Banned)"
                     f.append("**{}**: {:15} - **{:0.2f}**".format(index + 1, username, pointlist1[index]))
