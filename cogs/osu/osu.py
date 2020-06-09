@@ -72,7 +72,7 @@ class Osu(BaseCog):
             else:
                 id = message.content
                 id = id.split("https://osu.ppy.sh/beatmapsets/")[1].split(" ")[0].split("#osu/")[1]
-                embed = await self.osu.beatmap_embed(self,map_id=id)
+                embed = await self.osu.beatmap_embed(map_id=id)
                 await message.channel.send(embed=embed)
 
         if "https://osu.ppy.sh/ss/" in message.content:
