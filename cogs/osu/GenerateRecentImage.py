@@ -42,7 +42,7 @@ async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
         mods = "+" + mods
     titleText = "{} - {}".format(bmapinfo['artist'], bmapinfo['title'])
     subtitleText = "[" + bmapinfo['version']
-    maprank = await osu.mrank(mapID=res[num]['beatmap_id'], mapScore=[num]['score'])
+    maprank = await osu.mrank(mapID=res[num]['beatmap_id'], mapScore=res[num]['score'])
     toprank = None
     if not userbest:
         pass
