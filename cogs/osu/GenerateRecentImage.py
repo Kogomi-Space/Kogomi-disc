@@ -10,8 +10,9 @@ import matplotlib.pyplot as plt
 import datetime
 from PIL import Image, ImageDraw, ImageFont
 import urllib.request
+apikey = os.environ['OSUAPI']
 
-async def _gen_rb_img(self,ctx,num,user,apikey,temp,res):
+async def _gen_rb_img(self,ctx,num,user,temp,res):
     acc = round(calculate_acc(res[num]), 2)
     totalhits = (int(res[num]['count50']) + int(res[num]['count100']) + int(res[num]['count300']) + int(
         res[num]['countmiss']))
@@ -197,7 +198,7 @@ async def _gen_rb_img(self,ctx,num,user,apikey,temp,res):
     self.rtemplate.save("cache/score_{}.png".format(code))
     return code
 
-async def _gen_rs_img(self,ctx,num,user,apikey,userbest,res,isTry = False):
+async def _gen_rs_img(self,ctx,num,user,userbest,res,isTry = False):
     if isTry:
         trycount = 0
         tempid = res[num]['beatmap_id']
