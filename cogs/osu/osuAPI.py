@@ -13,11 +13,22 @@ class OsuAPI:
             self.user = username
         self.url = "https://osu.ppy.sh/api"
         self.key = os.environ['OSUAPI']
+        self.header = {"content-type": "application/json", "user-key": self.key}
+
+    async def mrank(self, ctx, mapID, mapScore):
+        res = await fetch_json(self,"get_scores",f"b={mapID}&limit=100")
+        idx = 1
+        for score in res:
+            if score['user_id'] == userID:
+                if score['score'] == mapScore:
+                    return idx
+            idx += 1
+        return None
 
     async def getUser(self):
         res = await fetch_json(self,"get_user",f"u={self.user}")
         if len(res) == 0:
-            return None
+            return False
         return res
 
     async def fetch_json(self,type,params = ""):

@@ -200,39 +200,6 @@ class Osu(BaseCog):
         embed.set_footer(text=f"Most recent match played at {lastMatch}")
         await ctx.send(embed=embed)
 
-    # @commands.command(pass_context=True)
-    # @commands.cooldown(1,300, commands.BucketType.user)
-    # async def suijisim(self,ctx):
-    #     pb = fetch_pb()
-    #     users = []
-    #     with open('untitled.txt') as f:
-    #         for line in f:
-    #             users.append(line[:-1])
-    #
-    #     seeds = []
-    #     for seed in ['A','B','C','D']:
-    #         for num in range(64):
-    #             seeds.append(seed)
-    #     nums_a = list(range(1,65))
-    #     nums_b = list(range(1,65))
-    #     nums_c = list(range(1,65))
-    #     nums_d = list(range(1,65))
-    #     for num in [nums_a, nums_b, nums_c, nums_d]:
-    #         random.shuffle(num)
-    #
-    #     team_order = nums_a + nums_b + nums_c + nums_d
-    #
-    #     players_df = pd.DataFrame({'player': users, 'seed': seeds, 'team': team_order})
-    #
-    #     players_df['seed'] = players_df.apply(lambda x: x['seed'] + '1' if x['team'] < 33 else x['seed'] + '2', axis=1)
-    #     players_df['team'] = (players_df['team'] % 32) + 1
-    #     res = players_df.pivot(index='team', columns='seed', values='player')
-    #     url = pb.create_paste(api_paste_code=res.to_markdown(),api_paste_private=1,api_paste_name="Suiji Simulator",api_paste_expire_date='1D',api_paste_format='markdown')
-    #     embed = discord.Embed()
-    #     embed.title = "Generated Suiji Teams"
-    #     embed.description = "[Click Here!]({})".format(url)
-    #     await ctx.send(embed=embed)
-
     @commands.command(pass_context=True)
     async def compare_mp(self,ctx):
         await ctx.send("Please input your team's MP link in this format: **[MP Link] [your team color(Blue = 1, Red = 2)]**")
@@ -350,17 +317,12 @@ class Osu(BaseCog):
     @commands.command()
     async def osu(self, ctx,*username_list):
         """Shows an osu user!"""
-        apikey = await self.config.apikey()
-        username = get_osuid(*username_list,db=self.db,discid=ctx.author.id)
-        if not username:
-            await ctx.send("**User not set! Please set your osu! username using -osuset [Username]! ❌**")
+        osu = User(username_list, ctx.author.id)
+        if not osu.user:
+            await ctx.send("**User not set, please set your osu! username using -osuset [Username]. ❌**")
             return
-        # Queries api to get osu profile
-        headers = {"content-type": "application/json", "user-key": apikey}
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f"https://osu.ppy.sh/api/get_user?k={apikey}&u={username}", headers=headers) as response:
-                osu = await response.json()
+        osu = osu.getUser()
 
         if osu:
             # Build Embed

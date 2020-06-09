@@ -47,17 +47,6 @@ def time_ago(time1, time2):
         time_ago += "{} Second{} ".format(timeago.second, determine_plural(timeago.second))
     return time_ago
 
-def calculate_acc(beatmap):
-    total_unscale_score = float(beatmap['count300'])
-    total_unscale_score += float(beatmap['count100'])
-    total_unscale_score += float(beatmap['count50'])
-    total_unscale_score += float(beatmap['countmiss'])
-    total_unscale_score *=300
-    user_score = float(beatmap['count300']) * 300.0
-    user_score += float(beatmap['count100']) * 100.0
-    user_score += float(beatmap['count50']) * 50.0
-    return (float(user_score)/float(total_unscale_score)) * 100.0
-
 def format_number(num):
     try:
         dec = decimal.Decimal(num)
@@ -271,30 +260,6 @@ def determine_plural(number):
     else:
         return ''
 
-def time_ago(time1, time2):
-    time_diff = time1 - time2
-    timeago = datetime.datetime(1,1,1) + time_diff
-    time_limit = 0
-    time_ago = ""
-    if timeago.year-1 != 0:
-        time_ago += "{} Year{} ".format(timeago.year-1, determine_plural(timeago.year-1))
-        time_limit = time_limit + 1
-    if timeago.month-1 !=0:
-        time_ago += "{} Month{} ".format(timeago.month-1, determine_plural(timeago.month-1))
-        time_limit = time_limit + 1
-    if timeago.day-1 !=0 and not time_limit == 2:
-        time_ago += "{} Day{} ".format(timeago.day-1, determine_plural(timeago.day-1))
-        time_limit = time_limit + 1
-    if timeago.hour != 0 and not time_limit == 2:
-        time_ago += "{} Hour{} ".format(timeago.hour, determine_plural(timeago.hour))
-        time_limit = time_limit + 1
-    if timeago.minute != 0 and not time_limit == 2:
-        time_ago += "{} Minute{} ".format(timeago.minute, determine_plural(timeago.minute))
-        time_limit = time_limit + 1
-    if not time_limit == 2:
-        time_ago += "{} Second{} ".format(timeago.second, determine_plural(timeago.second))
-    return time_ago
-
 async def rank_graph(userID,mode = 0):
     md = 'osu'
     if mode == '1': md = 'taiko'
@@ -328,23 +293,6 @@ async def rank_graph(userID,mode = 0):
     file = discord.File(f'cache/rank_{img_id}.png','rank_{}.png'.format(img_id))
     plt.close()
     return file, 'rank_{}.png'.format(img_id)
-
-async def mrank(self, ctx, mapID, mapScore, userID):
-    apikey = await self.config.apikey()
-    async with aiohttp.ClientSession(headers=self.header) as session:
-        try:
-            async with session.get("https://osu.ppy.sh/api/get_scores?b={}&limit=100&k={}".format(mapID,apikey)) as channel:
-                res = await channel.json()
-        except Exception as e:
-            await ctx.send("Error: " + str(e))
-            return
-    idx = 1
-    for score in res:
-        if score['user_id'] == userID:
-            if score['score'] == mapScore:
-                return idx
-        idx += 1
-    return None
 
 async def get_sr(self, mapID, mods):
     if mapID in self.maps:
