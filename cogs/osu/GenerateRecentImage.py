@@ -121,7 +121,7 @@ async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
         adraw.text(((832 - w) / 2, (208 - h) / 2), "{}pp".format(pp), defaultBoldFont)
         r = " R#{}".format(maprank)
         if toprank is not None:
-            r += ", PB{}".format(toprank)
+            r += ", PB#{}".format(toprank)
         w , h = adraw.textsize(r,getFont("NotoSansSemiBold", 12))
         adraw.text(((842 - w) / 2, (258 - h) / 2), r, getFont("NotoSansSemiBold", 12))
     elif toprank is not None:

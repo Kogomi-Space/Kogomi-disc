@@ -570,7 +570,7 @@ class Osu(BaseCog):
                 await ctx.send("User not found! :x:")
                 return
             res = sorted(temp, key=lambda x: datetime.datetime.strptime(x['date'], '%Y-%m-%d %H:%M:%S'), reverse=True)
-            code = await _gen_r_img(self, ctx, num, user, temp, res)
+            code = await _gen_r_img(self, ctx, num, user, res, temp)
             msg = await ctx.send(file=discord.File('cache/score_{}.png'.format(code)))
         await self.config.channel(ctx.channel).rmap.set(res[num]['beatmap_id'])
         await msg.add_reaction("🗺️")
