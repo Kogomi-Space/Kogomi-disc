@@ -482,7 +482,7 @@ class Osu(BaseCog):
                     "**{}** doesn't seem to have a #{} recent play. The latest score I could find was #{}.".format(
                         osu.user, num + 1, len(res)))
                 return
-            code = await _gen_rs_img(self, ctx, num, user, userbest, res, True)
+            code = await _gen_rs_img(self, ctx, num, user, res, userbest, True)
             msg = await ctx.send(file=discord.File('cache/score_{}.png'.format(code)))
         await self.config.channel(ctx.channel).rmap.set(res[num]['beatmap_id'])
         await msg.add_reaction("🗺️")

@@ -3,6 +3,7 @@ import os
 import asyncio
 import textwrap
 import random
+from .osuAPI import OsuAPI as osu
 import aggdraw
 import time
 import pycountry
@@ -11,194 +12,9 @@ import datetime
 from PIL import Image, ImageDraw, ImageFont
 import urllib.request
 apikey = os.environ['OSUAPI']
+osu = osu()
 
-async def _gen_rb_img(self,ctx,num,user,temp,res):
-    acc = round(calculate_acc(res[num]), 2)
-    totalhits = (int(res[num]['count50']) + int(res[num]['count100']) + int(res[num]['count300']) + int(
-        res[num]['countmiss']))
-    apibmapinfo = await use_api(self, ctx, "https://osu.ppy.sh/api/get_beatmaps?k={}&b={}".format(apikey, str(
-        res[num]['beatmap_id'])))
-    bmapinfo = await get_pyttanko(map_id=int(res[num]['beatmap_id']), misses=int(res[num]['countmiss']), accs=[acc],
-                                  mods=int(res[num]['enabled_mods']), combo=int(res[num]['maxcombo']),
-                                  completion=totalhits)
-    complete = round(bmapinfo['map_completion'], 2)
-    srating = str(round(bmapinfo['stars'], 2))
-    pp = round(float(bmapinfo['pp'][0]), 2)
-    mods = str(",".join(num_to_mod(res[num]['enabled_mods'])))
-    score = format(int(res[num]['score']), ',d')
-    if mods != "":
-        mods = "+" + mods
-    titleText = "{} - {}".format(bmapinfo['artist'], bmapinfo['title'])
-    subtitleText = "[" + bmapinfo['version']
-    maprank = await mrank(self, ctx, res[num]['beatmap_id'], res[num]['score'], user[0]['user_id'])
-    toprank = None
-    for idx, i in enumerate(temp):
-        if i['beatmap_id'] == res[num]['beatmap_id']:
-            toprank = idx + 1
-            break
-    self.rtemplate = Image.open("templates/recent.png")
-    draw = ImageDraw.Draw(self.rtemplate)
-    adraw = aggdraw.Draw(self.rtemplate)
-    titleFont = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansSemiBold.otf", 16)
-    subtitleFont = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansRegular.otf", 12)
-    defaultFont = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansLight.otf", 15)
-    defaultBoldFont = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansSemiBold.otf", 15)
-    smallFont = aggdraw.Font((255, 255, 255), "/root/Cubchoo-disc/fonts/NotoSansLight.otf", size=12, opacity=255)
-    smalllFont = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansLight.otf", 12)
-    smallBoldFont = aggdraw.Font((255, 255, 255), "/root/Cubchoo-disc/fonts/NotoSansSemiBold.otf", size=12, opacity=255)
-    smallBolddFont = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansSemiBold.otf", 12)
-    smallestFont = aggdraw.Font((255, 255, 255), "/root/Cubchoo-disc/fonts/NotoSansLight.otf", size=10, opacity=255)
-    smallesttFont = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansLight.otf", 10)
-    tryFont = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansLight.otf", 20)
-    hittFont = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansRegular.otf", 10)
-    hitFont = aggdraw.Font((255, 255, 255), "/root/Cubchoo-disc/fonts/NotoSansRegular.otf", size=12, opacity=255)
-    titleCutoff = False
-    while titleFont.getsize(titleText)[0] > 448:
-        titleText = titleText[:-1]
-        titleCutoff = True
-    if titleCutoff:
-        titleText += "..."
-    subtitleText += "] " + mods
-    # Draw User Info
-    adraw.text((498, 184), "{}pp".format(user[0]['pp_raw']), smallFont)
-    adraw.text((498, 198), "#{}, {} #{}".format(user[0]['pp_rank'], user[0]['country'], user[0]['pp_country_rank']),
-               smallFont)
-    timeago = "Score set {}ago.".format(time_ago(datetime.datetime.utcnow() + datetime.timedelta(hours=0),
-                                                 datetime.datetime.strptime(res[num]['date'], '%Y-%m-%d %H:%M:%S')))
-    tago = textwrap.wrap(timeago, width=22)
-    h = 268
-    for line in tago:
-        adraw.text((498, h), str(line), smallestFont)
-        h += 14
-    # Draw Combo
-    w, h = draw.textsize(res[num]['maxcombo'], smalllFont)
-    width = 20
-    height = 190
-    tempFont = aggdraw.Font((255, 255, 255), "/root/Cubchoo-disc/fonts/NotoSansLight.otf", size=14, opacity=255)
-    tempFontSize = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansLight.otf", 14)
-    tempBoldFont = aggdraw.Font((255, 255, 255), "/root/Cubchoo-disc/fonts/NotoSansSemiBold.otf", size=14, opacity=255)
-    tempBoldFontSize = ImageFont.truetype("/root/Cubchoo-disc/fonts/NotoSansSemiBold.otf", 14)
-    adraw.text((width, height), str(res[num]['maxcombo']), smallFont)
-    w2, h2 = draw.textsize(str(bmapinfo['max_combo']), smallBolddFont)
-    width2 = width + w + 12
-    height2 = (414 - h2) / 2
-    pen = aggdraw.Pen("white", 0.8)
-    adraw.line((width2, height + 4, width + w, height2 + h2), pen)
-    adraw.text((width2, height2), str(bmapinfo['max_combo']), smallBoldFont)
-    # Draw 300s 100s 50s and misses
-    w, h = draw.textsize(res[num]['count300'], font=hittFont)
-    adraw.text(((290 - w) / 2, (244 - h) / 2), str(res[num]['count300']), hitFont)
-    w, h = draw.textsize(res[num]['count50'], font=hittFont)
-    adraw.text(((290 - w) / 2, (300 - h) / 2), res[num]['count50'], hitFont)
-    w, h = draw.textsize(res[num]['count100'], font=hittFont)
-    adraw.text(((478 - w) / 2, (244 - h) / 2), str(res[num]['count100']), hitFont)
-    w, h = draw.textsize(res[num]['countmiss'], font=hittFont)
-    adraw.text(((478 - w) / 2, (300 - h) / 2), res[num]['countmiss'], hitFont)
-    # Draw if FC Stats
-    new300 = int(res[num]['count300']) + int(res[num]['countmiss'])
-    iffcstats = {"count50": res[num]['count50'], "count100": res[num]['count100'], "count300": new300, "countmiss": 0}
-    iffcacc = round(calculate_acc(iffcstats), 2)
-    iffcinfo = await get_pyttanko(map_id=res[num]['beatmap_id'], accs=[iffcacc], mods=int(res[num]['enabled_mods']),
-                                  fc=True)
-    iffcpp = round(float(iffcinfo['pp'][0]), 2)
-    w, h = draw.textsize(str(iffcacc), smallesttFont)
-    adraw.text(((790 - w) / 2, (530 - h) / 2), "IF FC WITH {}%".format(iffcacc), smallestFont)
-    # Draw URL
-    adraw.text((13, 282), "Generated using Cubchoo: https://github.com/dain98/Cubchoo-disc", smallestFont)
-    # Flush aggdraw
-    adraw.flush()
-    # Draw User Image
-    try:
-        urllib.request.urlretrieve("https://a.ppy.sh/{}".format(user[0]['user_id']),
-                                   "cache/user_{}.png".format(user[0]['user_id']))
-        userimage = Image.open("cache/user_{}.png".format(user[0]['user_id']))
-        userimage.thumbnail((54, 54), Image.ANTIALIAS)
-        self.rtemplate.paste(userimage, (525, 107))
-        os.remove("cache/user_{}.png".format(user[0]['user_id']))
-    except:
-        pass
-    # Draw Beatmap Image
-    try:
-        urllib.request.urlretrieve("https://b.ppy.sh/thumb/" + str(apibmapinfo[0]['beatmapset_id']) + "l.jpg",
-                                   'cache/map_{}.png'.format(apibmapinfo[0]['beatmapset_id']))
-        mapimage = Image.open("cache/map_{}.png".format(apibmapinfo[0]['beatmapset_id']))
-        mapimage.thumbnail((104, 78), Image.ANTIALIAS)
-        self.rtemplate.paste(mapimage, (498, 7))
-        os.remove("cache/map_{}.png".format(apibmapinfo[0]['beatmapset_id']))
-    except:
-        # print("Couldn't find a beatmap image for {}.".format(apibmapinfo[0]['beatmapset_id']))
-        pass
-    rankimage = Image.open("rankletters/rank" + res[num]['rank'] + ".png")
-    rankimage.thumbnail((100, 100), Image.ANTIALIAS)
-    self.rtemplate.paste(rankimage, (365, 63), rankimage)
-    # Draw User Info
-    draw.text((498, 166), "{}".format(user[0]['username']), font=defaultBoldFont, fill=(255, 255, 255))
-    # Draw name of map
-    draw.text((18, 13), titleText, font=titleFont, fill=(255, 255, 255))
-    if maprank is not None:
-        subtitleText = subtitleText + " Rank #{}".format(maprank)
-        if toprank is not None:
-            subtitleText = subtitleText + ", Personal Best #{}!".format(toprank)
-    elif toprank is not None:
-        subtitleText = subtitleText + " Personal Best #{}!".format(toprank)
-    draw.text((18, 34), subtitleText, font=subtitleFont, fill=(255, 255, 255))
-    # Draw score
-    draw.text((19, 79), score, font=defaultFont, fill=(255, 255, 255))
-    # Draw Difficulty
-    draw.text((284, 139), "{}*".format(srating), font=defaultBoldFont, fill=(255, 255, 255))
-    # Draw Map completion
-    draw.text((241, 193), "{:.2f}%".format(complete), font=defaultFont, fill=(255, 255, 255))
-    # Draw Accuracy
-    draw.text((150, 193), "{:.2f}%".format(acc), font=defaultBoldFont, fill=(255, 255, 255))
-    # Draw Beatmap information
-    if "DT" in mods:
-        lnth = round(float(apibmapinfo[0]['total_length']) / 1.5)
-        bpm = str(round(float(apibmapinfo[0]['bpm']) * 1.5, 2)).rstrip("0")
-    elif "HT" in mods:
-        lnth = round(float(apibmapinfo[0]['total_length']) / 0.75)
-        bpm = str(round(float(apibmapinfo[0]['bpm']) * 0.75, 2)).rstrip("0")
-    else:
-        lnth = float(apibmapinfo[0]['total_length'])
-        bpm = str(round(float(apibmapinfo[0]['bpm']), 2)).rstrip("0")
-        if bpm.endswith("."):
-            bpm = bpm[:-1]
-    length = str(datetime.timedelta(seconds=lnth))
-    if length[:1] == "0":
-        length = length[2:]
-    # minutes = int(lnth/60)
-    # seconds = lnth % 60
-    # hours = int(minutes/60)
-    # minutes = minutes%60
-    # if hours == 0:
-    #     length = str(minutes) + ":" + str(int(seconds))
-    # else:
-    #     length = str(hours) + ":" + str(int(minutes)) + ":" + str(int(seconds))
-    ar = str(round(bmapinfo['ar'], 2)).rstrip("0")
-    if bpm.endswith("."):
-        bpm = bpm[:-1]
-    if ar.endswith("."):
-        ar = ar[:-1]
-    od = str(round(bmapinfo['od'], 2)).rstrip("0")
-    if od.endswith("."):
-        od = od[:-1]
-    cs = str(round(bmapinfo['cs'], 2)).rstrip("0")
-    if cs.endswith("."):
-        cs = cs[:-1]
-    hp = str(round(bmapinfo['hp'], 2)).rstrip("0")
-    if hp.endswith("."):
-        hp = hp[:-1]
-    draw.text((20, 255), "Length: {}, AR {}, OD {}, CS {}, HP {}, {} BPM".format(length, ar, od, cs, hp, bpm),
-              font=smalllFont, fill=(255, 255, 255))
-    # Draw Performance
-    w, h = draw.textsize(str(pp), font=defaultFont)
-    draw.text(((832 - w) / 2, (406 - h) / 2), "{}pp".format(pp), font=defaultFont, fill=(255, 255, 255))
-    w, h = draw.textsize(str(iffcpp), font=defaultFont)
-    draw.text(((832 - w) / 2, (496 - h) / 2), "{}pp".format(iffcpp), font=defaultFont, fill=(255, 255, 255))
-    code = random.randint(100000000, 999999999)
-    self.rtemplate.save("cache/score_{}.png".format(code))
-    return code
-
-async def _gen_rs_img(self,ctx,num,user,userbest,res,isTry = False):
+async def _gen_rs_img(self,ctx,num,user,res,userbest = None,isTry = False):
     if isTry:
         trycount = 0
         tempid = res[num]['beatmap_id']
@@ -211,11 +27,12 @@ async def _gen_rs_img(self,ctx,num,user,userbest,res,isTry = False):
     acc = round(calculate_acc(res[num]), 2)
     totalhits = (int(res[num]['count50']) + int(res[num]['count100']) + int(res[num]['count300']) + int(
         res[num]['countmiss']))
-    apibmapinfo = await use_api(self, ctx, "https://osu.ppy.sh/api/get_beatmaps?k={}&b={}".format(apikey, str(
-        res[num]['beatmap_id'])))
-    bmapinfo = await get_pyttanko(map_id=int(res[num]['beatmap_id']), misses=int(res[num]['countmiss']), accs=[acc],
-                                  mods=int(res[num]['enabled_mods']), combo=int(res[num]['maxcombo']),
-                                  completion=totalhits)
+    bmapinfo, apibmapinfo = await osu.getBeatmap(mapid=int(res[num]['beatmap_id']),
+                                                 accs=[acc],
+                                                 mods=int(res[num]['enabled_mods']),
+                                                 misses=int(res[num]['countmiss']),
+                                                 combo=int(res[num]['maxcombo']),
+                                                 completion=totalhits)
     complete = round(bmapinfo['map_completion'], 2)
     srating = str(round(bmapinfo['stars'], 2))
     pp = round(float(bmapinfo['pp'][0]), 2)
@@ -227,11 +44,14 @@ async def _gen_rs_img(self,ctx,num,user,userbest,res,isTry = False):
     subtitleText = "[" + bmapinfo['version']
     maprank = await mrank(self, ctx, res[num]['beatmap_id'], res[num]['score'], user[0]['user_id'])
     toprank = None
-    for idx, i in enumerate(userbest):
-        if i['beatmap_id'] == res[num]['beatmap_id']:
-            if i['score'] == res[num]['score']:
-                toprank = idx + 1
-                break
+    if not userbest:
+        pass
+    else:
+        for idx, i in enumerate(userbest):
+            if i['beatmap_id'] == res[num]['beatmap_id']:
+                if i['score'] == res[num]['score']:
+                    toprank = idx + 1
+                    break
     self.rtemplate = Image.open("templates/recent.png")
     draw = ImageDraw.Draw(self.rtemplate)
     adraw = aggdraw.Draw(self.rtemplate)

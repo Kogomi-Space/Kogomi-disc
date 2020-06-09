@@ -1,11 +1,17 @@
 <component name="ProjectDictionaryState">
   <dictionary name="bristolact">
     <words>
+      <w>apibmapinfo</w>
       <w>apikey</w>
+      <w>beatmap</w>
       <w>beatmaps</w>
+      <w>bmapinfo</w>
       <w>discid</w>
       <w>mapid</w>
       <w>ptnko</w>
+      <w>tempid</w>
+      <w>trycount</w>
+      <w>userbest</w>
     </words>
   </dictionary>
 </component>

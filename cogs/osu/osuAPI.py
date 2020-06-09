@@ -122,8 +122,8 @@ class OsuAPI:
             except Exception as e:
                 return {}
 
-    async def getBeatmap(self,mapid, accs=[100]):
-        ptnko = await self.get_pyttanko(mapid,accs)
+    async def getBeatmap(self,mapid,accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None):
+        ptnko = await self.get_pyttanko(mapid,accs,mods,misses,combo,completion,fc)
         res = await self.fetch_json("get_beatmaps",f"b={mapid}")
         return ptnko, res
 
@@ -157,7 +157,7 @@ class OsuAPI:
             return False
         return res
 
-    async def get_pyttanko(self, map_id: str, accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None, color='blue'):
+    async def get_pyttanko(self, map_id: str, accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None):
         url = 'https://osu.ppy.sh/osu/{}'.format(map_id)
         file_path = os.getcwd() + '/temp/{}.osu'.format(map_id)
         await self.download_file(url, file_path)
