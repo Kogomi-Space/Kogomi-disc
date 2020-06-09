@@ -137,7 +137,7 @@ async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
     new300 = int(res[num]['count300']) + int(res[num]['countmiss'])
     iffcstats = {"count50": res[num]['count50'], "count100": res[num]['count100'], "count300": new300, "countmiss": 0}
     iffcacc = round(calculate_acc(iffcstats), 2)
-    iffcinfo = await get_pyttanko(map_id=res[num]['beatmap_id'], accs=[iffcacc], mods=int(res[num]['enabled_mods']),
+    iffcinfo = await osu.get_pyttanko(map_id=res[num]['beatmap_id'], accs=[iffcacc], mods=int(res[num]['enabled_mods']),
                                   fc=True)
     iffcpp = round(float(iffcinfo['pp'][0]), 2)
     w, h = adraw.textsize(str(iffcpp),defaultFont)
