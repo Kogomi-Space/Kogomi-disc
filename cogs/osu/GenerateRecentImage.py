@@ -69,7 +69,7 @@ async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
 
     # Draw name of map
     titleCutoff = False
-    while getFont("NotoSansSemiBold",16,True).getsize(titleText)[0] > 448:
+    while getFont("NotoSansSemiBold",16,True).getsize(titleText)[0] > 548:
         titleText = titleText[:-1]
         titleCutoff = True
     if titleCutoff:
