@@ -86,6 +86,7 @@ class Osu(BaseCog):
             res = pytesseract.image_to_string(Image.open("cache/ss_{}.png".format(code)),lang="eng+Aller")
             os.remove("cache/ss_{}.png".format(code))
             res = res.split("\n")
+            # print(res)
             try:
                 name = res[0].split('[')
                 diff = name[1].strip()
@@ -97,6 +98,7 @@ class Osu(BaseCog):
                 artist = name.split(' - ')
                 title = artist[1]
                 artist = artist[0]
+                # print(f"{name} | {diff} | {name} | {artist} | {title}")
             except Exception as e:
                 await couldNotFind(self,message)
                 return
@@ -235,7 +237,7 @@ class Osu(BaseCog):
             modnum = 16
         elif mods == "dt":
             modnum = 64
-        res, res2 = await self.osu.getBeatmap(mapid=mapID)
+        res, res2 = await self.osu.getBeatmap(mapid=mapID,mods=modnum)
         if mods == "dt":
             lnth = round(float(res2[0]['total_length']) / 1.5)
             bpm = str(round(float(res2[0]['bpm']) * 1.5,2)).rstrip("0")
@@ -260,10 +262,10 @@ class Osu(BaseCog):
             cs = cs[:-1]
         f = []
         f.append("```")
-        f.append("=HYPERLINK(\"https://osu.ppy.sh/b/{} \",\"{} - {} [{}]\")".format(mapID,res['artist'],res['title'],res['version']))
-        f.append("{}".format(mapID))
+        f.append(f"=HYPERLINK(\"https://osu.ppy.sh/b/{mapID}\",\"{res2[0]['artist']} - {res2[0]['title']} [{res2[0]['version']}]\")")
+        f.append(f"{mapID}")
         if mods == "fm":
-            reshr = await User.get_pyttanko(map_id=mapID,mods=16)
+            reshr = await self.osu.get_pyttanko(map_id=mapID,mods=16)
             ar2 = str(round(reshr['ar'],2)).rstrip("0")
             if ar2.endswith("."):
                 ar2 = ar2[:-1]
