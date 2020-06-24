@@ -13,6 +13,93 @@ from PIL import Image, ImageDraw, ImageFont
 import urllib.request
 apikey = os.environ['OSUAPI']
 
+USRIMGSIZE = 196
+USRIMGLOC = (65,68)
+MAPIMGSIZE = (900,250)
+MAPIMGCROPSIZE = (0,0,635,250)
+MAPIMGLOC = (928,415)
+RANKIMGLOC = (0,0)
+RANKIMGSIZE = (1920,1080)
+FLAGIMGLOC = (1754,14)
+FLAGIMGSIZE = (140,94)
+USRNAMELOC = (323,88)
+USRPPLOC = (323,181)
+USRGBLRANKLOC = (1020,154)
+USRCTYRANKLOC = (1020,246)
+TITLELOC = (54,417)
+SUBTITLELOC = (54,503)
+SCORELOC = (1810,770)
+LENGTHLOC = (1810, 890)
+COMPLETELOC = (1810, 1010)
+SRLOC = (110,990)
+
+async def _gen_nr_img(self,ctx,num,user,res,userbest,isTry = False):
+    osu = User(user[0]['user_id'])
+    if isTry:
+        await handleTry(ctx,res,num)
+    # Gather data
+    ptnko, api, complete, srating, pp, mods, score, title, subtitle, maprank, toprank = await fetchData(osu,res,num,userbest,isTry)
+    # Fetch beatmap info
+    length, bpm, ar, od, cs, hp = fetchBeatmapInfo(api, ptnko, mods)
+    # Open template
+    self.rtemplate = Image.open("templates/recent_new.png")
+    # Import template
+    adraw = aggdraw.Draw(self.rtemplate)
+    # Create fonts
+    light30 = getFont("Mont-Light",30)
+    light36 = getFont("Mont-Light",36)
+    light48 = getFont("Mont-Light",48)
+    light72 = getFont("Mont-Light",72)
+    heavy72 = getFont("Mont-Heavy",72)
+    # Draw username
+    adraw.text(USRNAMELOC, user[0]['username'], heavy72)
+    # Draw pp
+    adraw.text(USRPPLOC, f"{user[0]['pp_raw']} pp", light72)
+    # Draw global rank
+    w, h = adraw.textsize(f"#{user[0]['pp_rank']}",light30)
+    adraw.text(((USRGBLRANKLOC[0] - (w/2)), (USRGBLRANKLOC[1] - (h/2))), f"#{user[0]['pp_rank']}", light30)
+    # Draw country rank
+    w, h = adraw.textsize(f"#{user[0]['pp_country_rank']}",light30)
+    adraw.text(((USRCTYRANKLOC[0] - (w/2)), (USRCTYRANKLOC[1] - (h/2))), f"#{user[0]['pp_country_rank']}", light30)
+    # Draw score
+    w, _ = adraw.textsize(score,light48)
+    adraw.text(((SCORELOC[0] - w),SCORELOC[1]),score,light48)
+    # Draw length
+    w, _ = adraw.textsize(length,light48)
+    adraw.text(((LENGTHLOC[0] - w),LENGTHLOC[1]),length,light48)
+    # Draw Completion
+    w, _ = adraw.textsize("{:.2f}%".format(complete),light48)
+    adraw.text(((COMPLETELOC[0] - w),COMPLETELOC[1]),"{:.2f}%".format(complete),light48)
+    # Draw SR
+    w, _ = adraw.textsize(f"{srating}*",heavy72)
+    adraw.text(((SRLOC[0] - (w/2)),SRLOC[1]),f"{srating}*",heavy72)
+    # Draw title
+    adraw.text(TITLELOC,title,heavy72)
+    # Draw subtitle
+    subtitle += "] " + mods
+    adraw.text(SUBTITLELOC,subtitle,light48)
+    adraw.flush()
+    # Draw avatar
+    userimage = await fetchUserImage(user[0]['user_id'])
+    self.rtemplate.paste(userimage, USRIMGLOC)
+    atemplate = Image.open("templates/atemplate.png")
+    self.rtemplate.paste(atemplate,(0,0),atemplate)
+    os.remove(f"cache/user_{user[0]['user_id']}.png")
+    # Draw map image
+    mapimage = await fetchMapImage(api[0]['beatmapset_id'])
+    self.rtemplate.paste(mapimage, MAPIMGLOC)
+    os.remove(f"cache/map_{api[0]['beatmapset_id']}.png")
+    # Draw rank image
+    rankimage = fetchRankImage(res[num]['rank'])
+    self.rtemplate.paste(rankimage, RANKIMGLOC, rankimage)
+    # Draw flag image
+    flagimage = await fetchFlagImage(user[0]['country'])
+    self.rtemplate.paste(flagimage, FLAGIMGLOC, flagimage)
+    # Save file
+    code = random.randint(100000000, 999999999)
+    self.rtemplate.save("cache/score_{}.png".format(code))
+    return code
+
 async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
     osu = User(user[0]['user_id'])
     if isTry:
@@ -236,3 +323,106 @@ def getFont(type,size,measure=False):
 
 def getType(type):
     return "/root/Cubchoo-disc/fonts/{}.otf".format(type)
+
+async def fetchData(osu,res,num,userbest,isTry):
+    totalhits = (int(res[num]['count50']) + int(res[num]['count100']) + int(res[num]['count300']) + int(
+        res[num]['countmiss']))
+    bmapinfo, apibmapinfo = await osu.getBeatmap(mapid=int(res[num]['beatmap_id']),
+                                                 accs=[round(calculate_acc(res[num]), 2)],
+                                                 mods=int(res[num]['enabled_mods']),
+                                                 misses=int(res[num]['countmiss']),
+                                                 combo=int(res[num]['maxcombo']),
+                                                 completion=totalhits)
+    complete = round(bmapinfo['map_completion'], 2)
+    srating = str(round(bmapinfo['stars'], 2))
+    pp = round(float(bmapinfo['pp'][0]), 2)
+    mods = str(",".join(num_to_mod(res[num]['enabled_mods'])))
+    score = format(int(res[num]['score']), ',d')
+    if mods != "":
+        mods = "+" + mods
+    title = "{} - {}".format(bmapinfo['artist'], bmapinfo['title'])
+    subtitle = "[" + bmapinfo['version']
+    maprank = await osu.mrank(mapID=res[num]['beatmap_id'], mapScore=res[num]['score'])
+    toprank = None
+    if not userbest:
+        pass
+    else:
+        for idx, i in enumerate(userbest):
+            if i['beatmap_id'] == res[num]['beatmap_id']:
+                if isTry:
+                    if i['score'] == res[num]['score']:
+                        toprank = idx + 1
+                        break
+                else:
+                    toprank = idx + 1
+                    break
+    return bmapinfo, apibmapinfo, complete, srating, pp, mods, score, title, subtitle, maprank, toprank
+
+async def fetchUserImage(uid):
+    urllib.request.urlretrieve(f"https://a.ppy.sh/{uid}",
+                               f"cache/user_{uid}.png")
+    userimage = Image.open(f"cache/user_{uid}.png")
+    userimage.thumbnail((USRIMGSIZE,USRIMGSIZE), Image.BICUBIC)
+    userimage = userimage.resize((USRIMGSIZE,USRIMGSIZE))
+    return userimage
+
+async def fetchMapImage(mapid):
+    urllib.request.urlretrieve(f"https://assets.ppy.sh/beatmaps/{mapid}/covers/cover.jpg",
+                               f"cache/map_{mapid}.png")
+    mapimage = Image.open(f"cache/map_{mapid}.png")
+    mapimage.thumbnail(MAPIMGSIZE, Image.BICUBIC)
+    mapimage = mapimage.crop(MAPIMGCROPSIZE)
+    return mapimage
+
+async def fetchFlagImage(country):
+    urllib.request.urlretrieve(f"https://osu.ppy.sh/images/flags/{country}.png",
+                               f"cache/{country}.png")
+    flagimage = Image.open(f"cache/{country}.png")
+    flagimage.thumbnail(FLAGIMGSIZE, Image.BICUBIC)
+    flagimage = flagimage.resize(FLAGIMGSIZE)
+    return flagimage
+
+def fetchRankImage(rank):
+    rankimage = Image.open(f"rankletters/{rank}.png")
+    rankimage.thumbnail(RANKIMGSIZE, Image.BICUBIC)
+    return rankimage
+
+def fetchBeatmapInfo(api,ptnko, mods):
+    if "DT" in mods:
+        lnth = round(float(api[0]['total_length']) / 1.5)
+        bpm = str(round(float(api[0]['bpm']) * 1.5, 2)).rstrip("0")
+    elif "HT" in mods:
+        lnth = round(float(api[0]['total_length']) / 0.75)
+        bpm = str(round(float(api[0]['bpm']) * 0.75, 2)).rstrip("0")
+    else:
+        lnth = float(api[0]['total_length'])
+        bpm = str(round(float(api[0]['bpm']), 2)).rstrip("0")
+        if bpm.endswith("."):
+            bpm = bpm[:-1]
+    length = str(datetime.timedelta(seconds=lnth))
+    if length[:1] == "0":
+        length = length[2:]
+    ar = str(round(ptnko['ar'], 2)).rstrip("0")
+    if bpm.endswith("."):
+        bpm = bpm[:-1]
+    if ar.endswith("."):
+        ar = ar[:-1]
+    od = str(round(ptnko['od'], 2)).rstrip("0")
+    if od.endswith("."):
+        od = od[:-1]
+    cs = str(round(ptnko['cs'], 2)).rstrip("0")
+    if cs.endswith("."):
+        cs = cs[:-1]
+    hp = str(round(ptnko['hp'], 2)).rstrip("0")
+    if hp.endswith("."):
+        hp = hp[:-1]
+    return length, bpm, ar, od, cs, hp
+
+async def handleTry(ctx,res,num):
+    trycount = 0
+    for i in res:
+        if i['beatmap_id'] == res[num]['beatmap_id']:
+            trycount += 1
+        else:
+            break
+    await ctx.send(f"Try #{trycount}")

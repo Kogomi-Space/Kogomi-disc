@@ -4,7 +4,7 @@ from .osuAPI import OsuAPI as User
 from .functions import *
 from .DBFunctions import *
 from .MPComparer import *
-from .GenerateRecentImage import _gen_r_img
+from .GenerateRecentImage import _gen_r_img, _gen_nr_img
 from .SearchForUser import *
 from .ommfunc import *
 from redbot.core import commands, Config, checks
@@ -55,7 +55,8 @@ class Osu(BaseCog):
             username=None
         )
         self.config.register_channel(
-            rmap=None
+            rmap=None,
+            smap=None
         )
         self.db = Database()
 
@@ -73,6 +74,7 @@ class Osu(BaseCog):
                 id = message.content
                 id = id.split("https://osu.ppy.sh/beatmapsets/")[1].split(" ")[0].split("#osu/")[1]
                 embed = await self.osu.beatmap_embed(map_id=id)
+                await self.config.channel(message.channel).smap.set(id)
                 await message.channel.send(embed=embed)
 
         if "https://osu.ppy.sh/ss/" in message.content:
@@ -157,9 +159,10 @@ class Osu(BaseCog):
                     final = possible
                     finalDiff = possibleDiff
                 embed = await self.osu.beatmap_embed(finalDiff['id'])
+                await self.config.channel(message.channel).smap.set(finalDiff['id'])
                 await message.channel.send(embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def omms(self,ctx,*username_list):
         osu = User(username_list,ctx.author.id)
         if not osu.user:
@@ -201,7 +204,7 @@ class Osu(BaseCog):
         embed.set_footer(text=f"Most recent match played at {lastMatch}")
         await ctx.send(embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def compare_mp(self,ctx):
         await ctx.send("Please input your team's MP link in this format: **[MP Link] [your team color(Blue = 1, Red = 2)]**")
         def check(m):
@@ -227,9 +230,8 @@ class Osu(BaseCog):
             await ctx.send("Wrong Team ID. (Blue = 1, Red = 2)")
             return
         print(ourmp)
-        # await ctx.send("**Result: <{}>**".format(MPCompareRes(ourmp,theirmp)))
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def sformat(self,ctx,mapID,mods = "nm"):
         mods = mods.lower()
         modnum = 0
@@ -291,7 +293,7 @@ class Osu(BaseCog):
         f.append("```")
         await ctx.send("\n".join(f))
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def osuset(self,ctx,*username_list):
         """Set your osu! username."""
         apikey = await self.config.apikey()
@@ -345,7 +347,31 @@ class Osu(BaseCog):
         else:
             await ctx.send("No results.")
 
-    @commands.command(pass_context=True,aliases=['mc'])
+    # @commands.command()
+    # async def osutop(self,ctx,*username_list):
+    #     osu = User(username_list, ctx.author.id)
+    #     if not osu.user:
+    #         await ctx.send("**User not set, please set your osu! username using -osuset [Username]. ❌**")
+    #         return
+    #
+    #     res = await osu.getUserBest()
+    #     if not res:
+    #         await ctx.send(f"**No top plays found for {osu.user}. ❌**")
+    #         return
+    #     embed = discord.Embed(
+    #         description=f"Showing {low} - {high} out of {len(res)}", color=0x00ffff)
+    #     embed.set_author(name=f"Showing {osu.user}'s Top Plays"), # CHANGE OSU.USER TO USERNAME
+    #                      url=f"https://osu.ppy.sh/users/{osu.user}")
+    #     embed.set_thumbnail(url=f"https://b.ppy.sh/thumb/{res[0]['beatmapset_id']}l.jpg")
+    #     f = []
+    #     f.append(f"◆ {round(float(res2['stars']), 2)}***** ◆ **Length:** {length} ◆ {round(float(bpm), 2)} **BPM**")
+    #     f.append(f"◆ **AR** {ar} ◆ **OD** {od} ◆ **HP** {hp} ◆ **CS** {cs}")
+    #     f.append(
+    #         f"◆ **{round(float(res2['pp'][0]), 2)}pp** for 95% ◆ **{round(float(res2['pp'][1]), 2)}pp** for 99% ◆ **{round(float(res2['pp'][2]), 2)}pp** for SS")
+    #     embed.add_field(name=f"", value="\n".join(f), inline=False)
+    #     return embed
+
+    @commands.command(aliases=['mc'])
     async def match_costs(self,ctx,url,warmups=2):
         """Shows how well each player did in a multi lobby."""
         if 'https://osu.ppy.sh/community/matches' in url:
@@ -449,8 +475,119 @@ class Osu(BaseCog):
 
             await ctx.send(embed=embed)
 
+    @commands.command(aliases=['s'])
+    async def scores(self,ctx,*username_list):
+        """Find your scores on the map"""
+        mapid = await self.config.channel(ctx.channel).smap()
+        osu = User(username_list,ctx.author.id)
+        if not osu.user:
+            await ctx.send("**User not set, please set your osu! username using -osuset [username]. ❌**")
+            return
+        async with ctx.typing():
+            scores = await osu.getScores(mapid)
+            if not scores:
+                await ctx.send(f"No scores found for this map by {osu.user}. ❌")
+                return
+            f = []
+            count = 1
+            for i in scores:
+                mods = str(",".join(num_to_mod(i['enabled_mods'])))
+                if mods == "":
+                    mods = "NoMod"
+                acc = round(calculate_acc(i), 2)
+                mapinfo = await osu.get_pyttanko(map_id=mapid,
+                                                 accs=[acc],
+                                                 misses=int(i['countmiss']),
+                                                 mods=int(i['enabled_mods']),
+                                                 combo=int(i['maxcombo']))
+                f.append("**" + str(count) + "**: **" + mods + "** [**" + str(round(mapinfo['stars'], 2)) + "***]")
+                rank = rank_to_emote(i['rank'])
+                if i['pp'] is None:
+                    pp = round(mapinfo['pp'][0], 2)
+                else:
+                    pp = round(float(i['pp']), 2)
+
+                if int(i['perfect']) == 1:
+                    f.append(" ▸ " + rank + " ▸ **" + str(pp) + "pp** ▸ " + str(acc) + "%")
+                else:
+                    new300 = int(i['count300']) + int(i['countmiss'])
+                    fcstats = {"count50": i['count50'], "count100": i['count100'], "count300": new300, "countmiss": 0}
+                    fcacc = round(calculate_acc(fcstats), 2)
+                    fcinfo = await osu.get_pyttanko(map_id=mapid, accs=[fcacc], mods=int(i['enabled_mods']), fc=True)
+                    fcpp = round(float(fcinfo['pp'][0]), 2)
+                    f.append(" ▸ " + rank + " ▸ **" + str(pp) + "pp** (" + str(fcpp) + "pp for " + str(
+                        fcacc) + "% FC) ▸ " + str(acc) + "%")
+
+                f.append("▸ " + i['score'] + " ▸ x" + i['maxcombo'] + "/" + str(mapinfo['max_combo']) + " ▸ [" + i[
+                    'count300'] + "/" + i['count100'] + "/" + i['count50'] + "/" + i['countmiss'] + "]")
+                timeago = time_ago(datetime.datetime.utcnow() + datetime.timedelta(hours=0),
+                                   datetime.datetime.strptime(i['date'], '%Y-%m-%d %H:%M:%S'))
+                f.append("▸ Score set {} Ago".format(timeago))
+                count += 1
+            embed = discord.Embed(colour=0xD3D3D3, title="", description="\n".join(f))
+            embed.set_author(name=mapinfo['artist'] + " - " + mapinfo['title'] + "[" + mapinfo['version'] + "]",
+                             url="https://osu.ppy.sh/b/{}".format(mapid),
+                             icon_url="https://a.ppy.sh/{}".format(scores[0]['user_id']))
+            _, tempres = await osu.getBeatmap(mapid=mapid)
+            embed.set_thumbnail(url="https://b.ppy.sh/thumb/" + str(tempres[0]['beatmapset_id']) + "l.jpg")
+            await ctx.send(embed=embed)
+
+    @commands.command(aliases=['nrs'])
+    async def newrecent(self,ctx,*username_list):
+        """Get your most recent score! -recent [count] [username]"""
+        try:
+            if username_list[0].isdigit():
+                num = int(username_list[0]) - 1
+                username_list = username_list[1:]
+            else:
+                num = 0
+        except:
+            num = 0
+            pass
+        osu = User(username_list,ctx.author.id)
+        if not osu.user:
+            await ctx.send("**User not set, please set your osu! username using -osuset [Username]. ❌**")
+            return
+        async with ctx.typing():
+            user = await osu.getUser()
+            if not user:
+                await ctx.send("User not found! :x:")
+                return
+            userbest = await osu.getUserBest()
+            if not userbest:
+                await ctx.send("User top plays empty! :x:")
+                return
+            res = await osu.getUserRecent()
+            if not res:
+                await ctx.send("No recent plays found for {}. :x:".format(osu.user))
+                return
+            if len(res) <= num:
+                await ctx.send(
+                    "**{}** doesn't seem to have a #{} recent play. The latest score I could find was #{}.".format(
+                        osu.user, num + 1, len(res)))
+                return
+            code = await _gen_nr_img(self, ctx, num, user, res, userbest, True)
+            msg = await ctx.send(file=discord.File('cache/score_{}.png'.format(code)))
+        await self.config.channel(ctx.channel).rmap.set(res[num]['beatmap_id'])
+        await msg.add_reaction("🗺️")
+
+        def check(reaction, user):
+            return self.bot.user != user and msg.id == reaction.message.id and str(reaction.emoji) == '🗺️'
+
+        try:
+            reaction, user = await self.bot.wait_for('reaction_add', timeout=600.0, check=check)
+        except asyncio.TimeoutError:
+            await msg.remove_reaction('🗺️', self.bot.user)
+
+        else:
+            async with ctx.typing():
+                embed = await osu.beatmap_embed(map_id=res[num]['beatmap_id'])
+                await self.config.channel(ctx.channel).smap.set(res[num]['beatmap_id'])
+                await ctx.send(embed=embed)
+        os.remove('cache/score_{}.png'.format(code))
+
 # Grouping recent Commands
-    @commands.command(pass_context=True,aliases=['rs'])
+    @commands.command(aliases=['rs'])
     async def recent(self,ctx,*username_list):
         """Get your most recent score! -recent [count] [username]"""
         try:
@@ -500,10 +637,11 @@ class Osu(BaseCog):
         else:
             async with ctx.typing():
                 embed = await osu.beatmap_embed(map_id=res[num]['beatmap_id'])
+                await self.config.channel(ctx.channel).smap.set(res[num]['beatmap_id'])
                 await ctx.send(embed=embed)
         os.remove('cache/score_{}.png'.format(code))
 
-    @commands.command(pass_context=True,aliases=['rslist'])
+    @commands.command(aliases=['rslist'])
     async def recentlist(self,ctx,*username_list):
         osu = User(username_list, ctx.author.id)
         if not osu.user:
@@ -547,7 +685,7 @@ class Osu(BaseCog):
                     break
             await ctx.send(embed=embed)
 
-    @commands.command(pass_context=True,aliases=['rb'])
+    @commands.command(aliases=['rb'])
     async def recentbest(self,ctx,*username_list):
         try:
             if username_list[0].isdigit():
@@ -587,11 +725,12 @@ class Osu(BaseCog):
 
         else:
             async with ctx.typing():
-                embed = await osu.beatmap_embed(self, map_id=[num]['beatmap_id'])
+                embed = await osu.beatmap_embed(map_id=res[num]['beatmap_id'])
+                await self.config.channel(ctx.channel).smap.set(res[num]['beatmap_id'])
                 await ctx.send(embed=embed)
         os.remove('cache/score_{}.png'.format(code))
 
-    @commands.command(pass_context=True,aliases=['rpassed'])
+    @commands.command(aliases=['rpassed'])
     async def recentpassed(self,ctx,*username_list):
         try:
             if username_list[0].isdigit():
@@ -649,11 +788,12 @@ class Osu(BaseCog):
 
         else:
             async with ctx.typing():
-                embed = await osu.beatmap_embed(self, map_id=[num]['beatmap_id'])
+                embed = await osu.beatmap_embed(map_id=res[num]['beatmap_id'])
+                await self.config.channel(ctx.channel).smap.set(res[num]['beatmap_id'])
                 await ctx.send(embed=embed)
         os.remove('cache/score_{}.png'.format(code))
 
-    @commands.command(pass_context=True,aliases=['c'])
+    @commands.command(aliases=['c'])
     async def compare(self,ctx,*username_list):
         """Compare the last -recent score with your own."""
         rmap = await self.config.channel(ctx.channel).rmap()
@@ -714,7 +854,7 @@ class Osu(BaseCog):
             await ctx.send(embed=embed)
 
 # Simpler Commands
-    @commands.command(pass_context=True)
+    @commands.command()
     async def acc(self,ctx,c300,c100,c50,cMisses):
         """Calculates your accuracy! Format: -acc [300s] [100s] [50s] [misses]"""
         temp = {
@@ -725,7 +865,7 @@ class Osu(BaseCog):
         }
         await ctx.send("Your accuracy for [**{}**/**{}**/**{}**/**{}**] is **{}%**.".format(c300,c100,c50,cMisses,round(calculate_acc(temp),2)))
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def bws(self,ctx,rank,bcount):
         """Check your Badge Weighted Seeding rank. -bws [rank] [badgecount]"""
         bcount = int(bcount)
@@ -737,7 +877,7 @@ class Osu(BaseCog):
         await ctx.send("Previous Rank: **{}**    Badge Count: **{}**".format(rank,bcount))
         await ctx.send("Rank after BWS: **{}**".format(newrank))
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def petbws(self,ctx,rank,bcount):
         """Check your Badge Weighted Seeding rank for Pls Enjoy Tournament. -petbws [rank] [badgecount]"""
         bcount = int(bcount)
