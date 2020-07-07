@@ -120,6 +120,7 @@ async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
                                                  misses=int(res[num]['countmiss']),
                                                  combo=int(res[num]['maxcombo']),
                                                  completion=totalhits)
+    print(bmapinfo['map_completion'])
     complete = round(bmapinfo['map_completion'], 2)
     srating = str(round(bmapinfo['stars'], 2))
     pp = round(float(bmapinfo['pp'][0]), 2)
@@ -375,9 +376,10 @@ async def fetchMapImage(mapid):
     return mapimage
 
 async def fetchFlagImage(country):
-    urllib.request.urlretrieve(f"https://osu.ppy.sh/images/flags/{country}.png",
-                               f"cache/{country}.png")
-    flagimage = Image.open(f"cache/{country}.png")
+    if not os.path.isfile(f"cache/{country}.png"):
+        urllib.request.urlretrieve(f"https://osu.ppy.sh/images/flags/{country}.png",
+                                   f"cache/{country}.png")
+    flagimage = Image.open(f"cache/{country}.png").convert("RGBA")
     flagimage.thumbnail(FLAGIMGSIZE, Image.BICUBIC)
     flagimage = flagimage.resize(FLAGIMGSIZE)
     return flagimage

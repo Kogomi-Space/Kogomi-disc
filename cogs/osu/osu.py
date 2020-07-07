@@ -36,6 +36,7 @@ os.chdir("/root/Cubchoo-disc/cogs/osu/data")
 
 # TODO:
 #    > Add option for embed response, rather than image
+# Testing!!
 
 class Osu(BaseCog):
     """Show stuff using osu!"""
@@ -340,10 +341,14 @@ class Osu(BaseCog):
             embed.add_field(name="Playcount", value=res[0]["playcount"])
             embed.add_field(name="Total score", value=res[0]["total_score"])
             embed.add_field(name="Total seconds played", value=res[0]["total_seconds_played"])
-            file, rankgraph = await osu.rank_graph(0)
-            embed.set_image(url='attachment://{}'.format(rankgraph))
-            embed.set_thumbnail(url="https://a.ppy.sh/{}".format(res[0]["user_id"]))
-            await ctx.send(file=file,embed=embed)
+            try:
+                file, rankgraph = await osu.rank_graph(0)
+                embed.set_image(url='attachment://{}'.format(rankgraph))
+                embed.set_thumbnail(url="https://a.ppy.sh/{}".format(res[0]["user_id"]))
+                await ctx.send(file=file,embed=embed)
+            except:
+                embed.set_thumbnail(url="https://a.ppy.sh/{}".format(res[0]["user_id"]))
+                await ctx.send(embed=embed)
         else:
             await ctx.send("No results.")
 
@@ -458,7 +463,8 @@ class Osu(BaseCog):
                 f = []
                 for index, player in enumerate(userlist):
                     try:
-                        username = await get_username(self, ctx, player)
+                        username = await self.osu.getUser(user=player)
+                        username = username[0]['username']
                     except:
                         username = player + " (Banned)"
                     f.append("**{}**: {:15} - **{:0.2f}**".format(index + 1, username, pointlist[index]))

@@ -12,6 +12,8 @@ import pyttanko
 from bs4 import BeautifulSoup
 
 from .DBFunctions import *
+os.chdir("/root/Cubchoo-disc/cogs/osu/data")
+
 
 class OsuAPI:
 

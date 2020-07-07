@@ -3,6 +3,7 @@ import time
 import requests
 import json
 import os
+import numpy as np
 import random
 from redbot.core import commands, Config, checks
 import matplotlib.pyplot as plt
@@ -10,6 +11,8 @@ import aiohttp
 import urllib.request
 from bs4 import BeautifulSoup
 import re
+import cv2
+from PIL import Image
 import datetime
 import subprocess
 from random import seed
@@ -27,11 +30,43 @@ class Simpletools(BaseCog):
     def __init__(self):
         self.config = Config.get_conf(self, identifier=192837472)
         self.defaultPath = "cogs/CogManager/cogs/osu/data/"
+        self.toolsPath = "cogs/CogManager/cogs/simpletools/data"
         default_global = {"userid": ""}
         self.config.register_global(**default_global)
         self.config.register_user(
             username=None
         )
+
+    @commands.command()
+    async def dada(self,ctx,url = "https://ichef.bbci.co.uk/images/ic/960x960/p08634k6.jpg"):
+        lower_green = np.array([0,100,0])
+        upper_green = np.array([120,255,100])
+        os.chdir("/root/Cubchoo-disc/cogs/simpletools/data")
+        urllib.request.urlretrieve(str(url),"tempimage.png")
+        dada = cv2.imread("dada.jpg")
+        image = cv2.imread("tempimage.png")
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        mask = cv2.inRange(dada,lower_green,upper_green)
+        masked_image = np.copy(dada)
+        masked_image[mask != 0] = [0,0,0]
+        mask_image = np.copy(dada)
+        mask_image[mask == 0] = [0,0,0]
+        cv2.imwrite("tempmask.png",mask)
+        mask = Image.open('tempmask.png')
+        mask = mask.convert('RGBA')
+        datas = mask.getdata()
+        newData = []
+        for item in datas:
+            if item[0] == 0 and item[1] == 0 and item[2] == 0:
+                newData.append((255,255,255,0))
+            else:
+                newData.append(item)
+        mask.putdata(newData)
+        mask.save('tempmask.png',"PNG")
+        image = Image.open('tempimage.png')
+
+        await ctx.send(file=discord.File("tempmask2.png"))
+
 
     @commands.command(pass_context=True)
     @checks.is_owner()
