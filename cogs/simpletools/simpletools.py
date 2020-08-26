@@ -1,4 +1,5 @@
 import discord
+import asyncio
 import time
 import requests
 import json
@@ -34,8 +35,60 @@ class Simpletools(BaseCog):
         default_global = {"userid": ""}
         self.config.register_global(**default_global)
         self.config.register_user(
-            username=None
+            username=None,
+            rollwins=0,
+            rolllosses=0,
+            rollties=0
         )
+
+    @commands.command(aliases=['hc'])
+    async def headc(self,ctx,user: discord.Member):
+        if user is None:
+            await ctx.send("You must mention a user. :x:")
+            return
+        elif user == ctx.message.author:
+            await ctx.send("fuck u kurumi")
+            return
+        elif user.id == 438239507565903872:
+            await ctx.send(f"**Kogomi** rolled a 101 and fucking murdered u (why would u challenge me retard)")
+            selfl = await self.config.user(ctx.message.author).rolllosses()
+            await self.config.user(ctx.message.author).rolllosses.set(selfl + 1)
+            return
+        elif user.bot:
+            await ctx.send("double fuck u kurumi")
+            return
+        selfroll = random.randint(1,100)
+        opponentroll = random.randint(1,100)
+        await ctx.send(f"**{ctx.message.author.name}** rolled a **{selfroll}**, and...")
+        await ctx.send(f"**{user.name}** rolled a **{opponentroll}**.")
+        selfw = await self.config.user(ctx.message.author).rollwins()
+        selfl = await self.config.user(ctx.message.author).rolllosses()
+        selft = await self.config.user(ctx.message.author).rollties()
+        ow = await self.config.user(user).rollwins()
+        ol = await self.config.user(user).rolllosses()
+        ot = await self.config.user(user).rollties()
+
+        if selfroll > opponentroll:
+            await ctx.send(f"**<@{ctx.message.author.id}> wins!**")
+            await self.config.user(ctx.message.author).rollwins.set(selfw + 1)
+            await self.config.user(user).rolllosses.set(ol + 1)
+        elif selfroll < opponentroll:
+            await ctx.send(f"**<@{user.id}> wins!**")
+            await self.config.user(ctx.message.author).rolllosses.set(selfl + 1)
+            await self.config.user(user).rollwins.set(ow + 1)
+        else:
+            await ctx.send(f"**It's a tie!**")
+            await self.config.user(ctx.message.author).rollties.set(selft + 1)
+            await self.config.user(user).rollties.set(ot + 1)
+
+    @commands.command()
+    async def hcstats(self,ctx, user: discord.User = None):
+        if user is None:
+            user = ctx.message.author
+        w = await self.config.user(user).rollwins()
+        l = await self.config.user(user).rolllosses()
+        t = await self.config.user(user).rollties()
+        await ctx.send(f"**{user.name}** has **{w}** wins, **{l}** losses, and **{t}** ties.")
 
     @commands.command()
     async def dada(self,ctx,url = "https://ichef.bbci.co.uk/images/ic/960x960/p08634k6.jpg"):

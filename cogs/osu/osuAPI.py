@@ -14,6 +14,8 @@ from bs4 import BeautifulSoup
 from .DBFunctions import *
 os.chdir("/root/Cubchoo-disc/cogs/osu/data")
 
+TEMP_FILE_PATH = '/root/Cubchoo-disc/cogs/osu/data/temp'
+CACHE_FILE_PATH = '/root/Cubchoo-disc/cogs/osu/data/cache'
 
 class OsuAPI:
 
@@ -31,17 +33,14 @@ class OsuAPI:
     async def beatmap_embed(self, map_id: str):
         res2, res = await self.getBeatmap(map_id, accs=[95, 99, 100])
         mapper = res[0]['creator']
-        mapperlink = "https://osu.ppy.sh/users/{}".format(res[0]['creator_id'])
-        dllink = "https://osu.ppy.sh/d/{}".format(res[0]['beatmapset_id'])
-        bclink = "https://bloodcat.com/osu/s/{}".format(res[0]['beatmapset_id'])
-        preview = "https://bloodcat.com/osu/preview.html#{}".format(res[0]['beatmap_id'])
-        embed = discord.Embed(
-            description="by [{}]({})\nDownload: [official]({}) ([no vid]({}n)) [bloodcat]({}), [Map Preview]({})".format(
-                mapper, mapperlink, dllink, dllink, bclink, preview), color=0x00ffff)
-        embed.set_author(name="{} - {}".format(res[0]['artist'], res[0]['title']),
-                         url="https://osu.ppy.sh/beatmapsets/{}#osu/{}".format(res[0]['beatmapset_id'],
-                                                                               res[0]['beatmap_id']))
-        embed.set_thumbnail(url="https://b.ppy.sh/thumb/{}l.jpg".format(res[0]['beatmapset_id']))
+        mapperlink = f"https://osu.ppy.sh/users/{res[0]['creator_id']}"
+        dllink = f"https://osu.ppy.sh/d/{res[0]['beatmapset_id']}"
+        bclink = f"https://bloodcat.com/osu/s/{res[0]['beatmapset_id']}"
+        preview = f"https://bloodcat.com/osu/preview.html#{res[0]['beatmap_id']}"
+        embed = discord.Embed(description=f"by [{mapper}]({mapperlink})\nDownload: [official]({dllink}) ([no vid]({dllink}n)) [bloodcat]({bclink}), [Map Preview]({preview})", color=0x00ffff)
+        embed.set_author(name=f"{res[0]['artist']} - {res[0]['title']}",
+                         url=f"https://osu.ppy.sh/beatmapsets/{res[0]['beatmapset_id']}#osu/{res[0]['beatmap_id']}")
+        embed.set_thumbnail(url=f"https://b.ppy.sh/thumb/{res[0]['beatmapset_id']}l.jpg")
         lnth = float(res[0]['total_length'])
         bpm = str(round(float(res[0]['bpm']), 2)).rstrip("0")
         if bpm.endswith("."):
@@ -77,7 +76,7 @@ class OsuAPI:
         if mode == '2': md = 'fruits'
         if mode == '3': md = 'mania'
         async with aiohttp.ClientSession() as session:
-            async with session.get('https://osu.ppy.sh/users/{}/{}'.format(self.user, md)) as resp:
+            async with session.get(f'https://osu.ppy.sh/users/{self.user}/{md}') as resp:
                 text = await resp.read()
                 res = BeautifulSoup(text.decode('utf-8'), 'lxml')
         script = res.find("script", {"id": "json-user"}, type='application/json')
@@ -99,11 +98,10 @@ class OsuAPI:
         plt.ylim(max(rank_data) + int(.15 * rank_range), min(rank_data) - int(.15 * rank_range))
         plt.xticks([])
         img_id = random.randint(0, 50)
-        filepath = 'cache/rank_{}.png'.format(img_id)
         fig.savefig(filepath, transparent=True)
-        file = discord.File(f'cache/rank_{img_id}.png', 'rank_{}.png'.format(img_id))
+        file = discord.File(f'{CACHE_FILE_PATH}/rank_{img_id}.png', f'rank_{img_id}.png')
         plt.close()
-        return file, 'rank_{}.png'.format(img_id)
+        return file, f'rank_{img_id}.png'
 
     async def mrank(self, mapID, mapScore,user=False):
         if not user:
@@ -129,7 +127,8 @@ class OsuAPI:
     async def getBeatmap(self,mapid,accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None):
         try:
             ptnko = await self.get_pyttanko(mapid,accs,mods,misses,combo,completion,fc)
-        except:
+        except Exception as e:
+            print(e)
             ptnko = False
         res = await self.fetch_json("get_beatmaps",f"b={mapid}")
         return ptnko, res
@@ -174,7 +173,7 @@ class OsuAPI:
 
     async def get_pyttanko(self, map_id: str, accs=[100], mods=0, misses=0, combo=None, completion=None, fc=None):
         url = 'https://osu.ppy.sh/osu/{}'.format(map_id)
-        file_path = os.getcwd() + '/temp/{}.osu'.format(map_id)
+        file_path = f'{TEMP_FILE_PATH}/{map_id}.osu'
         await self.download_file(url, file_path)
         bmap = pyttanko.parser().map(open(file_path))
         _, ar, od, cs, hp = pyttanko.mods_apply(mods, ar=bmap.ar, od=bmap.od, cs=bmap.cs, hp=bmap.hp)
@@ -244,7 +243,7 @@ class OsuAPI:
     async def fetch_json(self,type,params = ""):
         async with aiohttp.ClientSession(headers=self.header) as session:
             try:
-                async with session.get("{}/{}?k={}&{}".format(self.url,type,self.key,params)) as channel:
+                async with session.get(f"{self.url}/{type}?k={self.key}&{params}") as channel:
                     res = await channel.json()
                     return res
             except Exception as e:

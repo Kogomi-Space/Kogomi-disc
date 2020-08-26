@@ -32,6 +32,10 @@ SCORELOC = (1810,770)
 LENGTHLOC = (1810, 890)
 COMPLETELOC = (1810, 1010)
 SRLOC = (110,990)
+TEMPLATE_FILE_PATH = '/root/Cubchoo-disc/cogs/osu/data/templates'
+TEMP_FILE_PATH = '/root/Cubchoo-disc/cogs/osu/data/temp'
+CACHE_FILE_PATH = '/root/Cubchoo-disc/cogs/osu/data/cache'
+RL_FILE_PATH = '/root/Cubchoo-disc/cogs/osu/data/rankletters'
 
 async def _gen_nr_img(self,ctx,num,user,res,userbest,isTry = False):
     osu = User(user[0]['user_id'])
@@ -42,7 +46,7 @@ async def _gen_nr_img(self,ctx,num,user,res,userbest,isTry = False):
     # Fetch beatmap info
     length, bpm, ar, od, cs, hp = fetchBeatmapInfo(api, ptnko, mods)
     # Open template
-    self.rtemplate = Image.open("templates/recent_new.png")
+    self.rtemplate = Image.open(f"{TEMPLATE_FILE_PATH}/recent_new.png")
     # Import template
     adraw = aggdraw.Draw(self.rtemplate)
     # Create fonts
@@ -82,13 +86,13 @@ async def _gen_nr_img(self,ctx,num,user,res,userbest,isTry = False):
     # Draw avatar
     userimage = await fetchUserImage(user[0]['user_id'])
     self.rtemplate.paste(userimage, USRIMGLOC)
-    atemplate = Image.open("templates/atemplate.png")
+    atemplate = Image.open(f"{TEMPLATE_FILE_PATH}/atemplate.png")
     self.rtemplate.paste(atemplate,(0,0),atemplate)
-    os.remove(f"cache/user_{user[0]['user_id']}.png")
+    os.remove(f"{CACHE_FILE_PATH}/user_{user[0]['user_id']}.png")
     # Draw map image
     mapimage = await fetchMapImage(api[0]['beatmapset_id'])
     self.rtemplate.paste(mapimage, MAPIMGLOC)
-    os.remove(f"cache/map_{api[0]['beatmapset_id']}.png")
+    os.remove(f"{CACHE_FILE_PATH}/map_{api[0]['beatmapset_id']}.png")
     # Draw rank image
     rankimage = fetchRankImage(res[num]['rank'])
     self.rtemplate.paste(rankimage, RANKIMGLOC, rankimage)
@@ -97,7 +101,7 @@ async def _gen_nr_img(self,ctx,num,user,res,userbest,isTry = False):
     self.rtemplate.paste(flagimage, FLAGIMGLOC, flagimage)
     # Save file
     code = random.randint(100000000, 999999999)
-    self.rtemplate.save("cache/score_{}.png".format(code))
+    self.rtemplate.save(f"{CACHE_FILE_PATH}/score_{code}.png")
     return code
 
 async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
@@ -120,8 +124,10 @@ async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
                                                  misses=int(res[num]['countmiss']),
                                                  combo=int(res[num]['maxcombo']),
                                                  completion=totalhits)
-    print(bmapinfo['map_completion'])
-    complete = round(bmapinfo['map_completion'], 2)
+    try:
+        complete = round(bmapinfo['map_completion'], 2)
+    except:
+        complete = 0
     srating = str(round(bmapinfo['stars'], 2))
     pp = round(float(bmapinfo['pp'][0]), 2)
     mods = str(",".join(num_to_mod(res[num]['enabled_mods'])))
@@ -144,7 +150,7 @@ async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
                 else:
                     toprank = idx + 1
                     break
-    self.rtemplate = Image.open("templates/recent.png")
+    self.rtemplate = Image.open(f"{TEMPLATE_FILE_PATH}/recent.png")
     draw = ImageDraw.Draw(self.rtemplate)
     adraw = aggdraw.Draw(self.rtemplate)
     defaultFont = getFont("NotoSansLight",16)
@@ -272,47 +278,50 @@ async def _gen_r_img(self,ctx,num,user,res,userbest,isTry = False):
     adraw.text((20, 255), "Length: {}, AR {}, OD {}, CS {}, HP {}, {} BPM".format(length, ar, od, cs, hp, bpm),getFont("NotoSansLight", 12))
     # Flush aggdraw
     adraw.flush()
+    try:
     # Draw Pie
-    labels = []
-    incomplete = 100 - complete
-    sizes = [complete,incomplete]
-    colors = ['#A5A5A5',"#42454C"]
-    plt.pie(sizes,colors=colors,shadow=False,startangle=90,counterclock=False)
-    plt.axis('equal')
-    # plt.tight_layout()
-    img_id = random.randint(0, 50)
-    filepath = 'cache/pie{}.png'.format(img_id)
-    plt.savefig(filepath,transparent=True)
-    pie = Image.open(filepath)
-    pie.thumbnail((40,40), Image.ANTIALIAS)
-    self.rtemplate.paste(pie, (234,189), pie)
-    os.remove(filepath)
+        labels = []
+        incomplete = 100 - complete
+        sizes = [complete,incomplete]
+        colors = ['#A5A5A5',"#42454C"]
+        plt.pie(sizes,colors=colors,shadow=False,startangle=90,counterclock=False)
+        plt.axis('equal')
+        # plt.tight_layout()
+        img_id = random.randint(0, 50)
+        filepath = f'{CACHE_FILE_PATH}/pie{img_id}.png'
+        plt.savefig(filepath,transparent=True)
+        pie = Image.open(filepath)
+        pie.thumbnail((40,40), Image.ANTIALIAS)
+        self.rtemplate.paste(pie, (234,189), pie)
+        os.remove(filepath)
+    except Exception as e:
+        print(f"Exception when drawing pie: {e}")
     # Draw User Image
     try:
         urllib.request.urlretrieve("https://a.ppy.sh/{}".format(user[0]['user_id']),
-                                   "cache/user_{}.png".format(user[0]['user_id']))
-        userimage = Image.open("cache/user_{}.png".format(user[0]['user_id']))
+                                   f"{CACHE_FILE_PATH}/user_{user[0]['user_id']}.png")
+        userimage = Image.open(f"{CACHE_FILE_PATH}/user_{user[0]['user_id']}.png")
         userimage.thumbnail((54, 54), Image.ANTIALIAS)
         self.rtemplate.paste(userimage, (525, 107))
-        os.remove("cache/user_{}.png".format(user[0]['user_id']))
+        os.remove(f"{CACHE_FILE_PATH}/user_{user[0]['user_id']}.png")
     except:
         pass
     # Draw Beatmap Image
     try:
         urllib.request.urlretrieve("https://b.ppy.sh/thumb/" + str(apibmapinfo[0]['beatmapset_id']) + "l.jpg",
-                                   'cache/map_{}.png'.format(apibmapinfo[0]['beatmapset_id']))
-        mapimage = Image.open("cache/map_{}.png".format(apibmapinfo[0]['beatmapset_id']))
+                                   f"{CACHE_FILE_PATH}/map_{apibmapinfo[0]['beatmapset_id']}.png")
+        mapimage = Image.open(f"{CACHE_FILE_PATH}/map_{apibmapinfo[0]['beatmapset_id']}.png")
         mapimage.thumbnail((104, 78), Image.ANTIALIAS)
         self.rtemplate.paste(mapimage, (498, 7))
-        os.remove("cache/map_{}.png".format(apibmapinfo[0]['beatmapset_id']))
+        os.remove(f"{CACHE_FILE_PATH}/map_{apibmapinfo[0]['beatmapset_id']}.png")
     except:
         # print("Couldn't find a beatmap image for {}.".format(apibmapinfo[0]['beatmapset_id']))
         pass
-    rankimage = Image.open("rankletters/rank" + res[num]['rank'] + ".png")
+    rankimage = Image.open(f"{RL_FILE_PATH}/rank{res[num]['rank']}.png")
     rankimage.thumbnail((100, 100), Image.ANTIALIAS)
     self.rtemplate.paste(rankimage, (250, 70), rankimage)
     code = random.randint(100000000, 999999999)
-    self.rtemplate.save("cache/score_{}.png".format(code))
+    self.rtemplate.save(f"{CACHE_FILE_PATH}/score_{code}.png")
     return code
 
 def getFont(type,size,measure=False):
@@ -361,31 +370,31 @@ async def fetchData(osu,res,num,userbest,isTry):
 
 async def fetchUserImage(uid):
     urllib.request.urlretrieve(f"https://a.ppy.sh/{uid}",
-                               f"cache/user_{uid}.png")
-    userimage = Image.open(f"cache/user_{uid}.png")
+                               f"{CACHE_FILE_PATH}/user_{uid}.png")
+    userimage = Image.open(f"{CACHE_FILE_PATH}/user_{uid}.png")
     userimage.thumbnail((USRIMGSIZE,USRIMGSIZE), Image.BICUBIC)
     userimage = userimage.resize((USRIMGSIZE,USRIMGSIZE))
     return userimage
 
 async def fetchMapImage(mapid):
     urllib.request.urlretrieve(f"https://assets.ppy.sh/beatmaps/{mapid}/covers/cover.jpg",
-                               f"cache/map_{mapid}.png")
-    mapimage = Image.open(f"cache/map_{mapid}.png")
+                               f"{CACHE_FILE_PATH}/map_{mapid}.png")
+    mapimage = Image.open(f"{CACHE_FILE_PATH}/map_{mapid}.png")
     mapimage.thumbnail(MAPIMGSIZE, Image.BICUBIC)
     mapimage = mapimage.crop(MAPIMGCROPSIZE)
     return mapimage
 
 async def fetchFlagImage(country):
-    if not os.path.isfile(f"cache/{country}.png"):
+    if not os.path.isfile(f"{CACHE_FILE_PATH}/{country}.png"):
         urllib.request.urlretrieve(f"https://osu.ppy.sh/images/flags/{country}.png",
-                                   f"cache/{country}.png")
-    flagimage = Image.open(f"cache/{country}.png").convert("RGBA")
+                                   f"{CACHE_FILE_PATH}/{country}.png")
+    flagimage = Image.open(f"{CACHE_FILE_PATH}/{country}.png").convert("RGBA")
     flagimage.thumbnail(FLAGIMGSIZE, Image.BICUBIC)
     flagimage = flagimage.resize(FLAGIMGSIZE)
     return flagimage
 
 def fetchRankImage(rank):
-    rankimage = Image.open(f"rankletters/{rank}.png")
+    rankimage = Image.open(f"{RL_FILE_PATH}/{rank}.png")
     rankimage.thumbnail(RANKIMGSIZE, Image.BICUBIC)
     return rankimage
 

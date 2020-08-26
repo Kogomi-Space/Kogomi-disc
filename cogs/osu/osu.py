@@ -164,6 +164,15 @@ class Osu(BaseCog):
                 await message.channel.send(embed=embed)
 
     @commands.command()
+    async def osuid(self,ctx,*username_list):
+        osu = User(username_list,ctx.author.id)
+        if not osu.user:
+            await ctx.send("User not set.")
+            return
+        id = await osu.getUser()
+        await ctx.send(id[0]['user_id'])
+
+    @commands.command()
     async def omms(self,ctx,*username_list):
         osu = User(username_list,ctx.author.id)
         if not osu.user:
@@ -478,7 +487,7 @@ class Osu(BaseCog):
                     embed = discord.Embed(title="<a:mLoading:529680784194404352> {}".format(name),
                                           url="https://osu.ppy.sh/mp/" + url,
                                           description=f)
-
+            embed.set_footer(text="Before you ask \"how did player x get y,\", please use your brain!")
             await ctx.send(embed=embed)
 
     @commands.command(aliases=['s'])
@@ -645,7 +654,10 @@ class Osu(BaseCog):
                 embed = await osu.beatmap_embed(map_id=res[num]['beatmap_id'])
                 await self.config.channel(ctx.channel).smap.set(res[num]['beatmap_id'])
                 await ctx.send(embed=embed)
-        os.remove('cache/score_{}.png'.format(code))
+        try:
+            os.remove('cache/score_{}.png'.format(code))
+        except:
+            pass
 
     @commands.command(aliases=['rslist'])
     async def recentlist(self,ctx,*username_list):
