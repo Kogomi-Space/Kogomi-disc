@@ -1,4 +1,4 @@
-![Kogomi - A Multi-Purpose Personal Assistant](http://main.zenith.blue/i/mr8e5.png)
+![Kogomi - A Multi-Purpose Personal Assistant](http://zenith.blue/i/mr8e5.png)
 
 The Discord Bot section of Kogomi. Commands and Settings can be changed [here](https://kogomi.gg).
 
